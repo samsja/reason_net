@@ -20,8 +20,8 @@ def run(conf: RunConfig):
     print("here")
     print(conf.seed)
 
-    # for batch in data.train_dataloader():
-    #     print(batch)
+    for batch in data.train_dataloader():
+        print(batch)
 
 
 @hydra.main(version_base="1.2")

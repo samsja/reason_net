@@ -34,10 +34,11 @@ class MathDataGen:
 
 class MathTokenizer:
     max_digit = 10
+    pad_token = "P"
 
     def __init__(self, operand: list[str]):
         digits = [str(i) for i in range(self.max_digit)]
-        self.anti_vocab: list[str] = digits + [op for op in operand] + ["<pad>"]
+        self.anti_vocab: list[str] = digits + [op for op in operand] + [self.pad_token]
         self.vocab = {term: i for i, term in enumerate(self.anti_vocab)}
 
     def encode(self, x: str) -> list[int]:
@@ -46,6 +47,10 @@ class MathTokenizer:
     def decode(self, x: list[int]) -> str:
         decoded = list(map(lambda x: self.anti_vocab[x], list(x)))
         return "".join(decoded)
+
+    @property
+    def pad_token_id(self) -> int:
+        return self.vocab[self.pad_token]
 
 
 class ListDataset(Dataset):
@@ -77,26 +82,36 @@ class MathDataModule(L.LightningDataModule):
 
     def setup(self, stage: str) -> None:
         # Assign train/val datasets for use in dataloaders
-        match stage:
-            case "fit":
-                full_raw = [self.generator.generate() for _ in range(self.conf.size)]
-                full_tokenized = [
-                    (self.tokenizer.encode(data), self.tokenizer.encode(target))
-                    for data, target in full_raw
-                ]
-                self.full_dataset = ListDataset(full_tokenized)
 
-                train_size = int(0.8 * len(self.full_dataset))
-                val_size = len(self.full_dataset) - train_size
+        if stage != "fit":
+            raise NotImplementedError(f"DataModule stage {stage} not implemented")
 
-                self.train, self.val = random_split(
-                    self.full_dataset,
-                    [train_size, val_size],
-                    generator=torch.Generator().manual_seed(self.conf.seed),
-                )
+        full_raw = [self.generator.generate() for _ in range(self.conf.size)]
 
-            case _:
-                raise NotImplementedError()
+        full_tokenized = [
+            (self.tokenizer.encode(data), self.tokenizer.encode(target))
+            for data, target in full_raw
+        ]
+
+        max_exo = max([len(exo) for exo, _ in full_tokenized])
+        max_resp = max([len(resp) for _, resp in full_tokenized])
+
+        for i, (exo, resp) in enumerate(full_tokenized):
+            full_tokenized[i] = (
+                exo + [self.tokenizer.pad_token_id] * (max_exo - len(exo)),
+                resp + [self.tokenizer.pad_token_id] * (max_resp - len(resp)),
+            )
+
+        self.full_dataset = ListDataset(full_tokenized)
+
+        train_size = int(0.8 * len(self.full_dataset))
+        val_size = len(self.full_dataset) - train_size
+
+        self.train, self.val = random_split(
+            self.full_dataset,
+            [train_size, val_size],
+            generator=torch.Generator().manual_seed(self.conf.seed),
+        )
 
     def train_dataloader(self) -> DataLoader:
         return DataLoader(self.train, batch_size=self.conf.batch_size)
