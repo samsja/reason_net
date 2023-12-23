@@ -168,3 +168,4 @@ cython_debug/
 saved_models/*
 
 *.ipynb
+outputs/*
