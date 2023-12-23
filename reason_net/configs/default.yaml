@@ -1,1 +1,8 @@
 seed: 42
+
+data:
+  seed: ${seed}
+  min: 0
+  max: 3
+  batch_size: 8
+  size: 256

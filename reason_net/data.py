@@ -1,8 +1,9 @@
 import random
+from pydantic import BaseModel
 
 import torch
 import lightning as L
-from torch.utils.data import Dataset, random_split
+from torch.utils.data import Dataset, random_split, DataLoader
 
 
 class MathDataGen:
@@ -35,11 +36,9 @@ class MathTokenizer:
     max_digit = 10
 
     def __init__(self, operand: list[str]):
-        self.vocab = {str(i): i for i in range(self.max_digit)}
-        for i, op in enumerate(operand):
-            self.vocab[op] = self.max_digit + i
-        self.anti_vocab = {value: key for key, value in self.vocab.items()}
-        self.vocab_size = len(self.vocab)
+        digits = [str(i) for i in range(self.max_digit)]
+        self.anti_vocab: list[str] = digits + [op for op in operand] + ["<pad>"]
+        self.vocab = {term: i for i, term in enumerate(self.anti_vocab)}
 
     def encode(self, x: str) -> list[int]:
         return list(map(lambda x: self.vocab[x], list(x)))
@@ -60,37 +59,47 @@ class ListDataset(Dataset):
         return self.data[idx]
 
 
+class MathDataConfig(BaseModel):
+    min: int
+    max: int
+    size: int
+    seed: int
+    batch_size: int
+
+
 class MathDataModule(L.LightningDataModule):
-    def __init__(self, min: int, max: int, size: int, seed: int):
-        self.size = size
+    def __init__(self, conf: MathDataConfig):
+        self.conf = conf
 
-        self.min = min
-        self.max = max
-        self.seed = seed
-
-    def prepare_data(self):
-        self.generator = MathDataGen(min, max)
+    def prepare_data(self) -> None:
+        self.generator = MathDataGen(self.conf.min, self.conf.max)
         self.tokenizer = MathTokenizer(MathDataGen.operand)
 
-    def setup(self, stage: str):
+    def setup(self, stage: str) -> None:
         # Assign train/val datasets for use in dataloaders
         match stage:
             case "fit":
-                full_raw = [self.generator.generate() for _ in range(self.size)]
+                full_raw = [self.generator.generate() for _ in range(self.conf.size)]
                 full_tokenized = [
                     (self.tokenizer.encode(data), self.tokenizer.encode(target))
                     for data, target in full_raw
                 ]
-                full_dataset = ListDataset(full_tokenized)
+                self.full_dataset = ListDataset(full_tokenized)
 
-                train_size = int(0.8 * len(full_dataset))
-                val_size = len(full_dataset) - train_size
+                train_size = int(0.8 * len(self.full_dataset))
+                val_size = len(self.full_dataset) - train_size
 
                 self.train, self.val = random_split(
-                    full_dataset,
+                    self.full_dataset,
                     [train_size, val_size],
-                    generator=torch.Generator().manual_seed(self.seed),
+                    generator=torch.Generator().manual_seed(self.conf.seed),
                 )
 
             case _:
                 raise NotImplementedError()
+
+    def train_dataloader(self) -> DataLoader:
+        return DataLoader(self.train, batch_size=self.conf.batch_size)
+
+    def val_dataloader(self) -> DataLoader:
+        return DataLoader(self.val, batch_size=self.conf.batch_size)
