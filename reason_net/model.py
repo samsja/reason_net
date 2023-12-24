@@ -1,61 +1,32 @@
-from typing import Protocol, TypeAlias, TypeVar
+from typing import TypeAlias, TypeVar
 
 from jaxtyping import Int, Float, Bool, jaxtyped
-from pydantic import BaseModel
-from torch import Tensor, nn
+from torch import Tensor
 import torch
 import torch.nn.functional as F
 from lightning import LightningModule
 from beartype import beartype as typechecker
+from pydantic import BaseModel
 
 from reason_net.data import BatchDataPoint
+from reason_net.llama import LLaMaConfig
 
 seq = TypeVar("seq")
 b = TypeVar("b")
 
 
-class GPTLikeConfig(BaseModel):
-    vocab_size: int
-    hidden_dim: int
-
-
-class GPTLike(Protocol):
-    def __init__(self, conf: GPTLikeConfig):
-        ...
-
-    def forward(self, x: Int[Tensor, "b seq"]) -> Float[Tensor, "b seq vocab_size"]:
-        ...
-
-
-class DummyGPTConfig(GPTLikeConfig):
-    ...
-
-
-class DummyGPT(nn.Module):
-    def __init__(self, conf: DummyGPTConfig):
-        super().__init__()
-        self.conf = conf
-        self.we = nn.Embedding(conf.vocab_size, conf.hidden_dim)
-        self.linear = nn.Linear(conf.hidden_dim, conf.vocab_size)
-
-    @jaxtyped(typechecker=typechecker)
-    def forward(self, x: Int[Tensor, "b seq"]) -> Float[Tensor, "b seq vocab_size"]:
-        x = self.we(x)
-        return self.linear(x)
-
-
-class GPTModuleConfig(BaseModel):
-    model: DummyGPTConfig
-    lr: float
-
-
 Batch: TypeAlias = tuple[Int[Tensor, "b seq_input"], Int[Tensor, "b seq_output"]]
 
 
-class GPTModule(LightningModule):
-    def __init__(self, conf: GPTModuleConfig):
+class ModuleConfig(BaseModel):
+    model: LLaMaConfig
+    lr: float
+
+
+class LLamModule(LightningModule):
+    def __init__(self, conf: ModuleConfig):
         super().__init__()
-        self.model = DummyGPT(conf.model)
+        self.model = LLaMaConfig(conf.model)
         self.conf = conf
 
     @jaxtyped(typechecker=typechecker)
