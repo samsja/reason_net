@@ -58,8 +58,8 @@ class GPTModule(LightningModule):
     def forward(self, x: Int[Tensor, "b seq"]) -> Float[Tensor, "b seq vocab_size"]:
         return self.model(x)
 
-    def configure_optimizers(self):
-        return torch.optim.AdamW(self.parameters(), lr=self.lr)
+    def configure_optimizers(self) -> torch.optim.Optimizer:
+        return torch.optim.AdamW(self.parameters(), lr=self.conf.lr)
 
     def _loss_step(
         self, step_name: str, batch: BatchDataPoint, _batch_idx

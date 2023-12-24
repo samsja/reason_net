@@ -85,6 +85,7 @@ class MathDataModule(L.LightningDataModule):
     train_prop: ClassVar[float] = 0.8
 
     def __init__(self, conf: MathDataConfig):
+        super().__init__()
         self.conf = conf
 
     def prepare_data(self) -> None:
