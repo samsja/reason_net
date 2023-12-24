@@ -7,9 +7,9 @@ Based on the nanoGPT implementation: https://github.com/karpathy/nanoGPT.
 """
 # mypy: ignore-errors
 import math
-from typing import List, Optional, Tuple, TypeAlias, Union
+from typing import Any, List, Optional, Tuple, TypeAlias, Union
 
-from pydantic import BaseModel, root_validator
+from pydantic import BaseModel, model_validator
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
@@ -42,8 +42,8 @@ class LLaMaConfig(BaseModel):
     n_head: int
     n_embd: int
 
-    @root_validator(pre=True)
-    def set_padded_vocab_size(cls, values):
+    @model_validator(mode="before")
+    def set_padded_vocab_size(cls, values: dict[str, Any]):
         """Set the padded vocab size to the next multiple of 64 if not provided."""
         vocab_size = values.get("vocab_size")
         padded_vocab_size = values.get("padded_vocab_size")
