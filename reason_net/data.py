@@ -1,6 +1,7 @@
 import random
-from pydantic import BaseModel
+from typing import Any, ClassVar
 
+from pydantic import BaseModel
 import torch
 import lightning as L
 from torch.utils.data import Dataset, random_split, DataLoader
@@ -73,6 +74,8 @@ class MathDataConfig(BaseModel):
 
 
 class MathDataModule(L.LightningDataModule):
+    train_prop: ClassVar[float] = 0.8
+
     def __init__(self, conf: MathDataConfig):
         self.conf = conf
 
@@ -80,35 +83,36 @@ class MathDataModule(L.LightningDataModule):
         self.generator = MathDataGen(self.conf.min, self.conf.max)
         self.tokenizer = MathTokenizer(MathDataGen.operand)
 
+    def _generate_data_point(self) -> tuple[list[int], int]:
+        exo, resp = self.generator.generate()
+        exo_tokenized = self.tokenizer.encode(exo)
+        resp_tokenized = self.tokenizer.encode(resp)
+
+        return exo_tokenized + resp_tokenized, len(exo_tokenized)
+
     def setup(self, stage: str) -> None:
         # Assign train/val datasets for use in dataloaders
 
         if stage != "fit":
             raise NotImplementedError(f"DataModule stage {stage} not implemented")
 
-        full_raw = [self.generator.generate() for _ in range(self.conf.size)]
-
-        full_tokenized = [
-            (self.tokenizer.encode(data), self.tokenizer.encode(target))
-            for data, target in full_raw
+        all_data_point: list[Any] = [
+            self._generate_data_point() for _ in range(self.conf.size)
         ]
 
-        max_exo = max([len(exo) for exo, _ in full_tokenized])
-        max_resp = max([len(resp) for _, resp in full_tokenized])
+        max_len = max([len(data) for data, _ in all_data_point])
 
-        for i, (exo, resp) in enumerate(full_tokenized):
-            exo = exo + [self.tokenizer.pad_token_id] * (max_exo - len(exo))
-            resp = resp + [self.tokenizer.pad_token_id] * (max_resp - len(resp))
+        for i, (data, cutoff) in enumerate(all_data_point):
+            data += [self.tokenizer.pad_token_id] * (max_len - len(data))
+            all_data_point[i] = (torch.tensor(data).long(), cutoff)
 
-            full_tokenized[i] = (torch.Tensor(exo).long(), torch.Tensor(resp).long())
+        self.dataset = ListDataset(all_data_point)
 
-        self.full_dataset = ListDataset(full_tokenized)
-
-        train_size = int(0.8 * len(self.full_dataset))
-        val_size = len(self.full_dataset) - train_size
+        train_size = int(self.train_prop * len(self.dataset))
+        val_size = len(self.dataset) - train_size
 
         self.train, self.val = random_split(
-            self.full_dataset,
+            self.dataset,
             [train_size, val_size],
             generator=torch.Generator().manual_seed(self.conf.seed),
         )

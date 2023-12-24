@@ -2,7 +2,6 @@ from typing import Any, cast
 import hydra
 from omegaconf import DictConfig, OmegaConf
 from pydantic import BaseModel
-import torch
 
 from reason_net.data import MathDataModule, MathDataConfig
 
@@ -21,9 +20,8 @@ def run(conf: RunConfig):
     print(conf.seed)
 
     for batch in data.train_dataloader():
-        assert len(batch) == 2
-        assert len(batch[0]) == len(batch[1])
-        assert batch[0].dtype == batch[1].dtype == torch.long
+        print(batch)
+        break
 
 
 @hydra.main(version_base="1.2")
