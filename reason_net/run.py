@@ -1,27 +1,50 @@
-from typing import Any, cast
+from typing import Any, Literal, cast
 import hydra
 from omegaconf import DictConfig, OmegaConf
 from pydantic import BaseModel
+from lightning import Trainer
+from lightning.pytorch.loggers import WandbLogger
 
 from reason_net.data import MathDataModule, MathDataConfig
+from reason_net.model import GPTModule, GPTModuleConfig
+
+
+class PlTrainerConfig(BaseModel):
+    precision: Literal["bf16-mixed", "bf16-true"]
+    max_epochs: int
+    log_every_n_steps: int
+    devices: int
+
+
+class WandbConfig(BaseModel):
+    enabled: bool
+    project_name: str
+
+
+class TrainerConfig(BaseModel):
+    lightning: PlTrainerConfig
+    wandb: WandbConfig
 
 
 class RunConfig(BaseModel):
-    seed: int
     data: MathDataConfig
+    module: GPTModuleConfig
+    trainer: TrainerConfig
 
 
 def run(conf: RunConfig):
     data = MathDataModule(conf.data)
+    module = GPTModule(conf.module)
 
-    data.prepare_data()
-    data.setup("fit")
+    wandb_logger = (
+        WandbLogger(project=conf.trainer.wandb.project_name)
+        if conf.trainer.wandb.enabled
+        else None
+    )
 
-    print(conf.seed)
+    trainer = Trainer(**conf.trainer.lightning.model_dump(), logger=wandb_logger)
 
-    for batch in data.train_dataloader():
-        print(batch)
-        break
+    trainer.fit(module, data)
 
 
 @hydra.main(version_base="1.2")

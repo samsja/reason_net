@@ -1,8 +1,26 @@
-seed: 42
 
 data:
-  seed: ${seed}
   min: 0
   max: 3
   batch_size: 8
   size: 256
+  seed: 42
+
+module:
+  model:
+      vocab_size: 15 # todo: make it based on tokenizer direclty
+      hidden_dim: 192
+  
+  lr: 1e-2
+
+trainer:
+
+  lightning:
+    precision: "bf16-mixed"
+    max_epochs: 10
+    log_every_n_steps: 1
+    devices: 1
+  
+  wandb:
+    enabled: false
+    project_name: "reason_net"

@@ -1,10 +1,12 @@
 import random
-from typing import Any, ClassVar
+from typing import ClassVar, TypeAlias, TypeVar
 
 from pydantic import BaseModel
 import torch
+from torch import Tensor
 import lightning as L
 from torch.utils.data import Dataset, random_split, DataLoader
+from jaxtyping import Int
 
 
 class MathDataGen:
@@ -73,6 +75,12 @@ class MathDataConfig(BaseModel):
     batch_size: int
 
 
+seq = TypeVar("seq")
+
+DataPoint: TypeAlias = tuple[Int[Tensor, "seq"], int]
+BatchDataPoint: TypeAlias = tuple[Int[Tensor, "b seq"], Int[Tensor, "b seq"]]
+
+
 class MathDataModule(L.LightningDataModule):
     train_prop: ClassVar[float] = 0.8
 
@@ -96,17 +104,17 @@ class MathDataModule(L.LightningDataModule):
         if stage != "fit":
             raise NotImplementedError(f"DataModule stage {stage} not implemented")
 
-        all_data_point: list[Any] = [
-            self._generate_data_point() for _ in range(self.conf.size)
-        ]
+        all_raw_data = [self._generate_data_point() for _ in range(self.conf.size)]
 
-        max_len = max([len(data) for data, _ in all_data_point])
+        all_data: list[DataPoint] = []
 
-        for i, (data, cutoff) in enumerate(all_data_point):
+        max_len = max([len(data) for data, _ in all_raw_data])
+
+        for data, cutoff in all_raw_data:
             data += [self.tokenizer.pad_token_id] * (max_len - len(data))
-            all_data_point[i] = (torch.tensor(data).long(), cutoff)
+            all_data.append((torch.tensor(data).long(), cutoff))
 
-        self.dataset = ListDataset(all_data_point)
+        self.dataset = ListDataset(all_data)
 
         train_size = int(self.train_prop * len(self.dataset))
         val_size = len(self.dataset) - train_size
