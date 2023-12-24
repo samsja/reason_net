@@ -28,6 +28,7 @@ ignore_missing_imports = true
 [tool.ruff]
 ignore = [
     "E501",  # line too long, handled by black
+    "F722", # allow jaxtyping see here https://docs.kidger.site/jaxtyping/faq/#flake8-or-ruff-are-throwing-an-error
 ]
 
 

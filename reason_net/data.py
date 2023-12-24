@@ -97,10 +97,10 @@ class MathDataModule(L.LightningDataModule):
         max_resp = max([len(resp) for _, resp in full_tokenized])
 
         for i, (exo, resp) in enumerate(full_tokenized):
-            full_tokenized[i] = (
-                exo + [self.tokenizer.pad_token_id] * (max_exo - len(exo)),
-                resp + [self.tokenizer.pad_token_id] * (max_resp - len(resp)),
-            )
+            exo = exo + [self.tokenizer.pad_token_id] * (max_exo - len(exo))
+            resp = resp + [self.tokenizer.pad_token_id] * (max_resp - len(resp))
+
+            full_tokenized[i] = (torch.Tensor(exo).long(), torch.Tensor(resp).long())
 
         self.full_dataset = ListDataset(full_tokenized)
 
