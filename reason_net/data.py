@@ -76,9 +76,10 @@ class MathDataConfig(BaseModel):
 
 
 seq = TypeVar("seq")
+b = TypeVar("b")
 
 DataPoint: TypeAlias = tuple[Int[Tensor, "seq"], int]
-BatchDataPoint: TypeAlias = tuple[Int[Tensor, "b seq"], Int[Tensor, "b seq"]]
+BatchDataPoint: TypeAlias = tuple[Int[Tensor, "b seq"], Int[Tensor, "b"]]
 
 
 class MathDataModule(L.LightningDataModule):

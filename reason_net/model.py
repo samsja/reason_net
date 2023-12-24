@@ -1,15 +1,16 @@
-from typing import Protocol, TypeAlias
+from typing import Protocol, TypeAlias, TypeVar
 
-from jaxtyping import Int, Float
+from jaxtyping import Int, Float, Bool
 from pydantic import BaseModel
 from torch import Tensor, nn
 import torch
 import torch.nn.functional as F
-from torch.nested import nested_tensor
 from lightning import LightningModule
-from einops import rearrange
 
 from reason_net.data import BatchDataPoint
+
+seq = TypeVar("seq")
+b = TypeVar("b")
 
 
 class GPTLikeConfig(BaseModel):
@@ -67,13 +68,10 @@ class GPTModule(LightningModule):
         data, all_cutoff = batch
         output = self.forward(data)
 
-        output_for_loss = nested_tensor(
-            [output[:, cutoff:, :] for cutoff in all_cutoff]
-        )
-        target = nested_tensor([data[:, cutoff:] for cutoff in all_cutoff])
+        cutoff_mask = get_cutoff_mask(all_cutoff, output.shape[1])
 
-        output_for_loss = rearrange(output_for_loss, "b seq vocab -> (b seq) vocab")
-        target = rearrange(target, "b seq -> (b seq)")
+        output_for_loss = output[cutoff_mask]
+        target = data[cutoff_mask]
 
         loss = F.cross_entropy(output_for_loss, target)
         self.log(f"{step_name}_loss", loss)
@@ -84,3 +82,14 @@ class GPTModule(LightningModule):
 
     def validation_step(self, batch: BatchDataPoint, _batch_idx) -> Float[Tensor, ""]:
         return self._loss_step("val", batch, _batch_idx)
+
+
+def get_cutoff_mask(all_cutoff: Int[Tensor, "b"], seq: int) -> Bool[Tensor, "b seq"]:
+    b = all_cutoff.shape[0]
+
+    mask = torch.zeros(b, seq, dtype=torch.bool, device=all_cutoff.device)
+
+    for i, cutoff in enumerate(all_cutoff):
+        mask[i, cutoff:] = True
+
+    return mask
