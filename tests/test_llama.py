@@ -3,7 +3,7 @@ from reason_net.llama import LLaMaConfig, LLaMA
 
 
 @torch.no_grad()
-def test_adapter_parity():
+def test_forward():
     """Test parity between our implementation of LLaMA-Adapter and the reference code."""
 
     block_size = 32

@@ -7,18 +7,25 @@ Based on the nanoGPT implementation: https://github.com/karpathy/nanoGPT.
 """
 # mypy: ignore-errors
 import math
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, TypeAlias, Union
 
 from pydantic import BaseModel, root_validator
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-# from torch import Tensor
-# from jaxtyping import Float, Int
+from torch import Tensor
+from jaxtyping import Float, Int, jaxtyped
+from beartype import beartype as typechecker
 
 MaskCache = torch.Tensor
-RoPECache = torch.Tensor
-KVCache = Tuple[torch.Tensor, torch.Tensor]
+RoPECache = Float[Tensor, "block_size head_embd 2"]
+KVCache = Tuple[torch.Tensor, torch.Tensor]  # todo use jaxtyping
+
+
+HiddenState: TypeAlias = Float[Tensor, "batch seq n_embd"]
+QKV: TypeAlias = Float[Tensor, "batch seq n_head head_embd"]
+Logits: TypeAlias = Float[Tensor, "batch seq vocab_size"]
+Index: TypeAlias = Int[Tensor, "batch seq"]
 
 
 def find_multiple(n: int, k: int) -> int:
@@ -75,12 +82,13 @@ class LLaMA(nn.Module):
                 module.weight, mean=0.0, std=0.02 / math.sqrt(2 * self.conf.n_layer)
             )
 
+    @jaxtyped(typechecker=typechecker)
     def forward(
         self,
-        idx: torch.Tensor,
+        idx: Index,
         max_seq_length: Optional[int] = None,
         input_pos: Optional[torch.Tensor] = None,
-    ) -> Union[torch.Tensor, Tuple[torch.Tensor, List[KVCache]]]:
+    ) -> Union[Logits, Tuple[Logits, List[KVCache]]]:
         B, T = idx.size()
 
         block_size = self.conf.block_size
@@ -137,7 +145,8 @@ class LLaMA(nn.Module):
 
         return logits
 
-    def build_rope_cache(self, idx: torch.Tensor) -> RoPECache:
+    @jaxtyped(typechecker=typechecker)
+    def build_rope_cache(self, idx: Index) -> RoPECache:
         return build_rope_cache(
             seq_len=self.conf.block_size,
             n_elem=self.conf.n_embd // self.conf.n_head,
@@ -145,7 +154,8 @@ class LLaMA(nn.Module):
             device=idx.device,
         )
 
-    def build_mask_cache(self, idx: torch.Tensor) -> MaskCache:
+    @jaxtyped(typechecker=typechecker)
+    def build_mask_cache(self, idx: Index) -> MaskCache:
         ones = torch.ones(
             (self.conf.block_size, self.conf.block_size),
             device=idx.device,
@@ -169,15 +179,16 @@ class Block(nn.Module):
         self.rms_2 = RMSNorm(conf.n_embd)
         self.mlp = MLP(conf)
 
+    @jaxtyped(typechecker=typechecker)
     def forward(
         self,
-        x: torch.Tensor,
+        x: HiddenState,
         rope: RoPECache,
         mask: MaskCache,
         max_seq_length: int,
         input_pos: Optional[torch.Tensor] = None,
         kv_cache: Optional[KVCache] = None,
-    ) -> Tuple[torch.Tensor, Optional[KVCache]]:
+    ) -> Tuple[HiddenState, Optional[KVCache]]:
         h, new_kv_cache = self.attn(
             self.rms_1(x), rope, mask, max_seq_length, input_pos, kv_cache
         )
@@ -200,15 +211,16 @@ class CausalSelfAttention(nn.Module):
         self.n_embd = conf.n_embd
         self.block_size = conf.block_size
 
+    @jaxtyped(typechecker=typechecker)
     def forward(
         self,
-        x: torch.Tensor,
+        x: HiddenState,
         rope: RoPECache,
         mask: MaskCache,
         max_seq_length: int,
         input_pos: Optional[torch.Tensor] = None,
         kv_cache: Optional[KVCache] = None,
-    ) -> Tuple[torch.Tensor, Optional[KVCache]]:
+    ) -> Tuple[HiddenState, Optional[KVCache]]:
         (
             B,
             T,
@@ -272,7 +284,8 @@ class MLP(nn.Module):
         self.c_fc2 = nn.Linear(conf.n_embd, n_hidden, bias=False)
         self.c_proj = nn.Linear(n_hidden, conf.n_embd, bias=False)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    @jaxtyped(typechecker=typechecker)
+    def forward(self, x: HiddenState) -> HiddenState:
         x = F.silu(self.c_fc1(x)) * self.c_fc2(x)
         x = self.c_proj(x)
         return x
@@ -291,7 +304,8 @@ class RMSNorm(nn.Module):
         self.eps = eps
         self.dim = dim
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    @jaxtyped(typechecker=typechecker)
+    def forward(self, x: HiddenState) -> HiddenState:
         # NOTE: the original RMSNorm paper implementation is not equivalent
         # norm_x = x.norm(2, dim=self.dim, keepdim=True)
         # rms_x = norm_x * d_x ** (-1. / 2)
@@ -301,6 +315,7 @@ class RMSNorm(nn.Module):
         return self.scale * x_normed
 
 
+@jaxtyped(typechecker=typechecker)
 def build_rope_cache(
     seq_len: int,
     n_elem: int,
@@ -327,13 +342,13 @@ def build_rope_cache(
 
     cache = torch.stack([torch.cos(idx_theta), torch.sin(idx_theta)], dim=-1)
 
-    # this is to mimic the behaviour of complex32, else we will get different results
+    # this is to mimic the behaviour of complex32, else we will get different results``
     if dtype in (torch.float16, torch.bfloat16, torch.int8):
         cache = cache.half()
     return cache
 
 
-def apply_rope(x: torch.Tensor, rope_cache: RoPECache) -> torch.Tensor:
+def apply_rope(x: QKV, rope_cache: RoPECache) -> QKV:
     # truncate to support variable sizes
     T = x.size(1)
     rope_cache = rope_cache[:T]
