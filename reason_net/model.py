@@ -1,11 +1,12 @@
 from typing import Protocol, TypeAlias, TypeVar
 
-from jaxtyping import Int, Float, Bool
+from jaxtyping import Int, Float, Bool, jaxtyped
 from pydantic import BaseModel
 from torch import Tensor, nn
 import torch
 import torch.nn.functional as F
 from lightning import LightningModule
+from beartype import beartype as typechecker
 
 from reason_net.data import BatchDataPoint
 
@@ -37,6 +38,7 @@ class DummyGPT(nn.Module):
         self.we = nn.Embedding(conf.vocab_size, conf.hidden_dim)
         self.linear = nn.Linear(conf.hidden_dim, conf.vocab_size)
 
+    @jaxtyped(typechecker=typechecker)
     def forward(self, x: Int[Tensor, "b seq"]) -> Float[Tensor, "b seq vocab_size"]:
         x = self.we(x)
         return self.linear(x)
@@ -56,6 +58,7 @@ class GPTModule(LightningModule):
         self.model = DummyGPT(conf.model)
         self.conf = conf
 
+    @jaxtyped(typechecker=typechecker)
     def forward(self, x: Int[Tensor, "b seq"]) -> Float[Tensor, "b seq vocab_size"]:
         return self.model(x)
 
@@ -84,6 +87,7 @@ class GPTModule(LightningModule):
         return self._loss_step("val", batch, _batch_idx)
 
 
+@jaxtyped(typechecker=typechecker)
 def get_cutoff_mask(all_cutoff: Int[Tensor, "b"], seq: int) -> Bool[Tensor, "b seq"]:
     b = all_cutoff.shape[0]
 
