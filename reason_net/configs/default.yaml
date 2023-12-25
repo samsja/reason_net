@@ -1,3 +1,5 @@
+defaults:
+  - module/model: 70M
 
 data:
   min: 0
@@ -7,10 +9,6 @@ data:
   seed: 42
 
 module:
-  model:
-      vocab_size: 15 # todo: make it based on tokenizer direclty
-      hidden_dim: 192
-  
   lr: 1e-2
 
 trainer:

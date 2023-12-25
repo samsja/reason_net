@@ -9,7 +9,7 @@ from beartype import beartype as typechecker
 from pydantic import BaseModel
 
 from reason_net.data import BatchDataPoint
-from reason_net.llama import LLaMaConfig
+from reason_net.llama import LLaMA, LLaMaConfig
 
 seq = TypeVar("seq")
 b = TypeVar("b")
@@ -26,7 +26,7 @@ class ModuleConfig(BaseModel):
 class LLamModule(LightningModule):
     def __init__(self, conf: ModuleConfig):
         super().__init__()
-        self.model = LLaMaConfig(conf.model)
+        self.model = LLaMA(conf.model)
         self.conf = conf
 
     @jaxtyped(typechecker=typechecker)

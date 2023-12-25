@@ -6,7 +6,7 @@ from lightning import Trainer
 from lightning.pytorch.loggers import WandbLogger
 
 from reason_net.data import MathDataModule, MathDataConfig
-from reason_net.model import GPTModule, GPTModuleConfig
+from reason_net.model import LLamModule, ModuleConfig
 
 
 class PlTrainerConfig(BaseModel):
@@ -28,13 +28,13 @@ class TrainerConfig(BaseModel):
 
 class RunConfig(BaseModel):
     data: MathDataConfig
-    module: GPTModuleConfig
+    module: ModuleConfig
     trainer: TrainerConfig
 
 
 def run(conf: RunConfig):
     data = MathDataModule(conf.data)
-    module = GPTModule(conf.module)
+    module = LLamModule(conf.module)
 
     wandb_logger = (
         WandbLogger(project=conf.trainer.wandb.project_name)
