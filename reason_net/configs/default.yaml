@@ -5,8 +5,9 @@ data:
   min: 0
   max: 3
   batch_size: 8
-  size: 256
+  size: 100_000
   seed: 42
+  num_workers: 4
 
 module:
   lr: 1e-2
@@ -15,10 +16,10 @@ trainer:
 
   lightning:
     precision: "bf16-mixed"
-    max_epochs: 10
+    max_epochs: 1
     log_every_n_steps: 1
     devices: 1
   
   wandb:
-    enabled: false
+    enabled: true
     project_name: "reason_net"

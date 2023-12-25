@@ -73,6 +73,7 @@ class MathDataConfig(BaseModel):
     size: int
     seed: int
     batch_size: int
+    num_workers: int
 
 
 seq = TypeVar("seq")
@@ -128,7 +129,13 @@ class MathDataModule(L.LightningDataModule):
         )
 
     def train_dataloader(self) -> DataLoader:
-        return DataLoader(self.train, batch_size=self.conf.batch_size)
+        return DataLoader(
+            self.train,
+            batch_size=self.conf.batch_size,
+            num_workers=self.conf.num_workers,
+        )
 
     def val_dataloader(self) -> DataLoader:
-        return DataLoader(self.val, batch_size=self.conf.batch_size)
+        return DataLoader(
+            self.val, batch_size=self.conf.batch_size, num_workers=self.conf.num_workers
+        )

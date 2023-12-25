@@ -16,6 +16,8 @@ def config() -> RunConfig:
 
     conf.trainer.lightning.max_epochs = 2
     conf.data.size = 16
+    conf.data.num_workers = 0
+    conf.trainer.wandb.enabled = False
 
     return conf
 

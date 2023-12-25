@@ -4,7 +4,7 @@ from reason_net.llama import LLaMaConfig, LLaMA
 
 @torch.no_grad()
 def test_forward():
-    """Test parity between our implementation of LLaMA-Adapter and the reference code."""
+    """test llama."""
 
     block_size = 32
     vocab_size = 100
