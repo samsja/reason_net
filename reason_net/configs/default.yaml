@@ -1,5 +1,5 @@
 defaults:
-  - module/model: 70M
+  - module/model: 14M
 
 data:
   min: 0
