@@ -42,9 +42,7 @@ def run(conf: RunConfig):
         else None
     )
 
-    trainer = Trainer(
-        accelerator="gpu", **conf.trainer.lightning.model_dump(), logger=wandb_logger
-    )
+    trainer = Trainer(**conf.trainer.lightning.model_dump(), logger=wandb_logger)
 
     trainer.fit(module, data)
 

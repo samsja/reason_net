@@ -12,7 +12,12 @@ def config() -> RunConfig:
     ):
         raw_conf = compose(config_name="default.yaml", overrides=["module/model=2M"])
 
-    return omegaconf_to_pydantic(raw_conf)
+    conf = omegaconf_to_pydantic(raw_conf)
+
+    conf.trainer.lightning.max_epochs = 2
+    conf.data.size = 16
+
+    return conf
 
 
 def test_run(config: RunConfig):
