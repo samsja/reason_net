@@ -7,7 +7,7 @@ from lightning.pytorch.loggers import WandbLogger
 import torch
 
 from reason_net.data import MathDataModule, MathDataConfig
-from reason_net.model import LLamModule, ModuleConfig
+from reason_net.module import LLamModule, ModuleConfig
 
 
 class PlTrainerConfig(BaseModel):
