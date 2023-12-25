@@ -7,7 +7,7 @@ Based on the nanoGPT implementation: https://github.com/karpathy/nanoGPT.
 """
 # mypy: ignore-errors
 import math
-from typing import Any, List, Optional, Tuple, TypeAlias, Union
+from typing import Any, TypeAlias
 
 from pydantic import BaseModel, model_validator
 import torch
@@ -19,7 +19,7 @@ from beartype import beartype as typechecker
 
 MaskCache = torch.Tensor
 RoPECache = Float[Tensor, "block_size head_embd 2"]
-KVCache = Tuple[torch.Tensor, torch.Tensor]  # todo use jaxtyping
+KVCache = tuple[torch.Tensor, torch.Tensor]  # todo use jaxtyping
 
 
 HiddenState: TypeAlias = Float[Tensor, "batch seq n_embd"]
@@ -68,9 +68,9 @@ class LLaMA(nn.Module):
             )
         )
 
-        self.rope_cache: Optional[RoPECache] = None
-        self.mask_cache: Optional[MaskCache] = None
-        self.kv_caches: List[KVCache] = []
+        self.rope_cache: RoPECache | None = None
+        self.mask_cache: MaskCache | None = None
+        self.kv_caches: list[KVCache] = []
 
     def _init_weights(self, module: nn.Module) -> None:
         if isinstance(module, nn.Linear):
@@ -86,9 +86,9 @@ class LLaMA(nn.Module):
     def forward(
         self,
         idx: Index,
-        max_seq_length: Optional[int] = None,
-        input_pos: Optional[torch.Tensor] = None,
-    ) -> Union[Logits, Tuple[Logits, List[KVCache]]]:
+        max_seq_length: int | None = None,
+        input_pos: torch.Tensor | None = None,
+    ) -> Logits | tuple[Logits, list[KVCache]]:
         B, T = idx.size()
 
         block_size = self.conf.block_size
@@ -186,9 +186,9 @@ class Block(nn.Module):
         rope: RoPECache,
         mask: MaskCache,
         max_seq_length: int,
-        input_pos: Optional[torch.Tensor] = None,
-        kv_cache: Optional[KVCache] = None,
-    ) -> Tuple[HiddenState, Optional[KVCache]]:
+        input_pos: torch.Tensor | None = None,
+        kv_cache: KVCache | None = None,
+    ) -> tuple[HiddenState, KVCache | None]:
         h, new_kv_cache = self.attn(
             self.rms_1(x), rope, mask, max_seq_length, input_pos, kv_cache
         )
@@ -218,9 +218,9 @@ class CausalSelfAttention(nn.Module):
         rope: RoPECache,
         mask: MaskCache,
         max_seq_length: int,
-        input_pos: Optional[torch.Tensor] = None,
-        kv_cache: Optional[KVCache] = None,
-    ) -> Tuple[HiddenState, Optional[KVCache]]:
+        input_pos: torch.Tensor | None = None,
+        kv_cache: KVCache | None = None,
+    ) -> tuple[HiddenState, KVCache | None]:
         (
             B,
             T,
