@@ -37,7 +37,7 @@ def run(conf: RunConfig):
     module = LLamModule(conf.module)
 
     wandb_logger = (
-        WandbLogger(project=conf.trainer.wandb.project_name)
+        WandbLogger(project=conf.trainer.wandb.project_name, save_dir="lightning_logs")
         if conf.trainer.wandb.enabled
         else None
     )
