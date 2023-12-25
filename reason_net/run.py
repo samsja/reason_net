@@ -15,6 +15,7 @@ class PlTrainerConfig(BaseModel):
     max_epochs: int
     log_every_n_steps: int
     devices: int
+    val_check_interval: float | int
 
 
 class WandbConfig(BaseModel):
