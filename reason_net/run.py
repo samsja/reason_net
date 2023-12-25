@@ -1,4 +1,4 @@
-from typing import Any, Literal, cast
+from typing import Literal
 import hydra
 from omegaconf import DictConfig, OmegaConf
 from pydantic import BaseModel
@@ -49,12 +49,15 @@ def run(conf: RunConfig):
     trainer.fit(module, data)
 
 
+def omegaconf_to_pydantic(raw_conf: DictConfig) -> RunConfig:
+    OmegaConf.resolve(raw_conf)
+    return RunConfig(**OmegaConf.to_container(raw_conf))  # type: ignore
+
+
 @hydra.main(version_base="1.2")
 def main(raw_conf: DictConfig):
-    OmegaConf.resolve(raw_conf)
-    dict_conf = cast(dict[str, Any], OmegaConf.to_container(raw_conf))
-    print(dict_conf)
-    conf = RunConfig(**dict_conf)
+    conf = omegaconf_to_pydantic(raw_conf)
+    print(conf)
     run(conf)
 
 
