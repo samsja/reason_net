@@ -3,7 +3,7 @@ defaults:
 
 data:
   min: 0
-  max: 6
+  max: 10
   batch_size: 1024
   size: 1_000_000
   seed: 42
