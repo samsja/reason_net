@@ -4,6 +4,7 @@ from omegaconf import DictConfig, OmegaConf
 from pydantic import BaseModel
 from lightning import Trainer
 from lightning.pytorch.loggers import WandbLogger
+import torch
 
 from reason_net.data import MathDataModule, MathDataConfig
 from reason_net.model import LLamModule, ModuleConfig
@@ -60,4 +61,5 @@ def main(raw_conf: DictConfig):
 
 
 if __name__ == "__main__":
+    torch.set_float32_matmul_precision("high")
     main()
