@@ -24,7 +24,8 @@ def config() -> RunConfig:
     return conf
 
 
-def test_run(config: RunConfig):
+def test_run(config: RunConfig, tmp_path):
+    config.trainer.save_dir = str(tmp_path)
     module, data = run(config)
 
     if torch.cuda.is_available():

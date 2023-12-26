@@ -28,6 +28,7 @@ class WandbConfig(BaseModel):
 class TrainerConfig(BaseModel):
     lightning: PlTrainerConfig
     wandb: WandbConfig
+    save_dir: str
 
 
 class RunConfig(BaseModel):
@@ -41,12 +42,15 @@ def run(conf: RunConfig) -> tuple[LLaMaModule, MathDataModule]:
     module = LLaMaModule(conf.module)
 
     wandb_logger = (
-        WandbLogger(project=conf.trainer.wandb.project_name, save_dir="lightning_logs")
+        WandbLogger(
+            project=conf.trainer.wandb.project_name, save_dir=conf.trainer.save_dir
+        )
         if conf.trainer.wandb.enabled
         else None
     )
 
     checkpoint_callback = ModelCheckpoint(
+        dirpath=conf.trainer.save_dir,
         monitor="val_loss",
         filename="reason_net-{epoch:02d}-{val_loss:.2f}",
         save_top_k=2,
