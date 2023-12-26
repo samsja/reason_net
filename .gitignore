@@ -170,3 +170,4 @@ saved_models/*
 *.ipynb
 outputs/*
 lightning_logs/*
+checkpoints/*

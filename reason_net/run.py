@@ -4,6 +4,8 @@ from omegaconf import DictConfig, OmegaConf
 from pydantic import BaseModel
 from lightning import Trainer
 from lightning.pytorch.loggers import WandbLogger
+from lightning.pytorch.callbacks import ModelCheckpoint
+
 import torch
 
 from reason_net.data import MathDataModule, MathDataConfig
@@ -44,7 +46,18 @@ def run(conf: RunConfig):
         else None
     )
 
-    trainer = Trainer(**conf.trainer.lightning.model_dump(), logger=wandb_logger)
+    checkpoint_callback = ModelCheckpoint(
+        monitor="val_loss",
+        filename="reason_net-{epoch:02d}-{val_loss:.2f}",
+        save_top_k=2,
+        save_last=True,
+    )
+
+    callbacks = [checkpoint_callback]
+
+    trainer = Trainer(
+        **conf.trainer.lightning.model_dump(), logger=wandb_logger, callbacks=callbacks
+    )
 
     trainer.fit(module, data)
 
