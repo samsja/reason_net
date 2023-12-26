@@ -1,5 +1,5 @@
 block_size: 128
-vocab_size: 15 # todo base this on MathTokenizer 
+vocab_size: 16 # todo base this on MathTokenizer 
 n_layer: 6
 n_head: 4
 n_embd: 128

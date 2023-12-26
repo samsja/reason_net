@@ -38,10 +38,13 @@ class MathDataGen:
 class MathTokenizer:
     max_digit = 10
     pad_token = "P"
+    eos_token = "S"
 
     def __init__(self, operand: list[str]):
         digits = [str(i) for i in range(self.max_digit)]
-        self.anti_vocab: list[str] = digits + [op for op in operand] + [self.pad_token]
+        self.anti_vocab: list[str] = (
+            digits + [op for op in operand] + [self.pad_token, self.eos_token]
+        )
         self.vocab = {term: i for i, term in enumerate(self.anti_vocab)}
 
     def encode(self, x: str) -> list[int]:
@@ -54,6 +57,10 @@ class MathTokenizer:
     @property
     def pad_token_id(self) -> int:
         return self.vocab[self.pad_token]
+
+    @property
+    def eos_token_id(self) -> int:
+        return self.vocab[self.eos_token]
 
 
 class ListDataset(Dataset):
@@ -99,7 +106,9 @@ class MathDataModule(L.LightningDataModule):
         exo_tokenized = self.tokenizer.encode(exo)
         resp_tokenized = self.tokenizer.encode(resp)
 
-        return exo_tokenized + resp_tokenized, len(exo_tokenized)
+        return exo_tokenized + resp_tokenized + [self.tokenizer.eos_token_id], len(
+            exo_tokenized
+        )
 
     def setup(self, stage: str) -> None:
         # Assign train/val datasets for use in dataloaders
