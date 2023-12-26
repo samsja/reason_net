@@ -39,11 +39,12 @@ class MathTokenizer:
     max_digit = 10
     pad_token = "P"
     eos_token = "S"
+    operand = MathDataGen.operand
 
-    def __init__(self, operand: list[str]):
+    def __init__(self):
         digits = [str(i) for i in range(self.max_digit)]
         self.anti_vocab: list[str] = (
-            digits + [op for op in operand] + [self.pad_token, self.eos_token]
+            digits + [op for op in self.operand] + [self.pad_token, self.eos_token]
         )
         self.vocab = {term: i for i, term in enumerate(self.anti_vocab)}
 
@@ -99,7 +100,7 @@ class MathDataModule(L.LightningDataModule):
 
     def prepare_data(self) -> None:
         self.generator = MathDataGen(self.conf.min, self.conf.max)
-        self.tokenizer = MathTokenizer(MathDataGen.operand)
+        self.tokenizer = MathTokenizer()
 
     def _generate_data_point(self) -> tuple[list[int], int]:
         exo, resp = self.generator.generate()

@@ -9,7 +9,7 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 import torch
 
 from reason_net.data import MathDataModule, MathDataConfig
-from reason_net.module import LLamModule, ModuleConfig
+from reason_net.module import LLaMaModule, ModuleConfig
 
 
 class PlTrainerConfig(BaseModel):
@@ -36,9 +36,9 @@ class RunConfig(BaseModel):
     trainer: TrainerConfig
 
 
-def run(conf: RunConfig):
+def run(conf: RunConfig) -> tuple[LLaMaModule, MathDataModule]:
     data = MathDataModule(conf.data)
-    module = LLamModule(conf.module)
+    module = LLaMaModule(conf.module)
 
     wandb_logger = (
         WandbLogger(project=conf.trainer.wandb.project_name, save_dir="lightning_logs")
@@ -60,6 +60,8 @@ def run(conf: RunConfig):
     )
 
     trainer.fit(module, data)
+
+    return module, data
 
 
 def omegaconf_to_pydantic(raw_conf: DictConfig) -> RunConfig:

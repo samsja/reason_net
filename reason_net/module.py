@@ -23,7 +23,7 @@ class ModuleConfig(BaseModel):
     lr: float
 
 
-class LLamModule(LightningModule):
+class LLaMaModule(LightningModule):
     def __init__(self, conf: ModuleConfig):
         super().__init__()
         self.model = LLaMA(conf.model)

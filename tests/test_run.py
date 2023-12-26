@@ -1,6 +1,8 @@
 import pytest
+import torch
 
 from reason_net.run import RunConfig, run, omegaconf_to_pydantic
+from reason_net.generate import generate
 from hydra import compose, initialize
 
 
@@ -23,4 +25,9 @@ def config() -> RunConfig:
 
 
 def test_run(config: RunConfig):
-    run(config)
+    module, data = run(config)
+
+    if torch.cuda.is_available():
+        module.to("cuda")
+    idx = torch.Tensor(data.tokenizer.encode("1+1")).long().to(module.device)
+    generate(module.model, idx, 10)
