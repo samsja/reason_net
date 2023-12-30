@@ -32,5 +32,7 @@ def test_run(config: RunConfig, tmp_path):
         module.to("cuda")
 
     idx = torch.Tensor(data.tokenizer.encode("1+1")).long().to(module.device)
-    generate(module.model, idx, 10)
-    # generated = data.tokenizer.decode(generate(module.model, idx, 10).to("cpu").tolist())
+    generated = generate(module.model, idx, 10).to("cpu").tolist()
+    decoded = data.tokenizer.decode(generated)
+
+    assert decoded is not None

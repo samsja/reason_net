@@ -39,6 +39,7 @@ class MathTokenizer:
     max_digit = 10
     pad_token = "P"
     eos_token = "S"
+    unknown_token = "U"
     operand = MathDataGen.operand
 
     def __init__(self) -> None:
@@ -51,6 +52,12 @@ class MathTokenizer:
     def encode(self, x: str) -> list[int]:
         return list(map(lambda x: self.vocab[x], list(x)))
 
+    def _decode_caract(self, x: int) -> str:
+        if x < self.vocab_size:
+            return self.anti_vocab[x]
+        else:
+            return self.unknown_token
+
     def decode(self, x: list[int]) -> str:
         decoded = list(map(lambda x: self.anti_vocab[x], list(x)))
         return "".join(decoded)
@@ -62,6 +69,10 @@ class MathTokenizer:
     @property
     def eos_token_id(self) -> int:
         return self.vocab[self.eos_token]
+
+    @property
+    def vocab_size(self) -> int:
+        return len(self.vocab)
 
 
 class ListDataset(Dataset):
