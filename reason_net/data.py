@@ -41,7 +41,7 @@ class MathTokenizer:
     eos_token = "S"
     operand = MathDataGen.operand
 
-    def __init__(self):
+    def __init__(self) -> None:
         digits = [str(i) for i in range(self.max_digit)]
         self.anti_vocab: list[str] = (
             digits + [op for op in self.operand] + [self.pad_token, self.eos_token]

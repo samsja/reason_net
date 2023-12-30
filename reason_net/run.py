@@ -4,9 +4,10 @@ from omegaconf import DictConfig, OmegaConf
 from pydantic import BaseModel
 from lightning import Trainer
 from lightning.pytorch.loggers import WandbLogger
-from lightning.pytorch.callbacks import ModelCheckpoint
+from lightning.pytorch.callbacks import ModelCheckpoint, Callback
 
 import torch
+import wandb
 
 from reason_net.data import MathDataModule, MathDataConfig
 from reason_net.module import LLaMaModule, ModuleConfig
@@ -41,12 +42,11 @@ def run(conf: RunConfig) -> tuple[LLaMaModule, MathDataModule]:
     data = MathDataModule(conf.data)
     module = LLaMaModule(conf.module)
 
-    wandb_logger = (
-        WandbLogger(
-            project=conf.trainer.wandb.project_name, save_dir=conf.trainer.save_dir
-        )
-        if conf.trainer.wandb.enabled
-        else None
+    if not (conf.trainer.wandb.enabled):
+        wandb.init(mode="disabled")  # type: ignore
+
+    wandb_logger = WandbLogger(
+        project=conf.trainer.wandb.project_name, save_dir=conf.trainer.save_dir
     )
 
     checkpoint_callback = ModelCheckpoint(
@@ -57,7 +57,7 @@ def run(conf: RunConfig) -> tuple[LLaMaModule, MathDataModule]:
         save_last=True,
     )
 
-    callbacks = [checkpoint_callback]
+    callbacks: list[Callback] = [checkpoint_callback]
 
     trainer = Trainer(
         **conf.trainer.lightning.model_dump(), logger=wandb_logger, callbacks=callbacks
