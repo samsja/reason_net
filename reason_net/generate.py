@@ -107,6 +107,7 @@ def main(
     model_conf: Literal["2M", "14M", "70M"],
     prompt: str,
     *,
+    interactive: bool = False,
     num_samples: int = 1,
     max_new_tokens: int = 20,
     top_k: int = 200,
@@ -135,34 +136,33 @@ def main(
     model.eval()
     model = fabric.setup(model)
     tokenizer = MathTokenizer()
-    encoded = torch.Tensor(tokenizer.encode(prompt)).long().to(fabric.device)
-    prompt_length = encoded.size(0)
 
     L.seed_everything(1234)
-    for i in range(num_samples):
-        t0 = time.perf_counter()
-        y = generate(
-            model,
-            encoded,
-            max_new_tokens,
-            temperature=temperature,
-            top_k=top_k,
-            eos_id=tokenizer.eos_token_id,
-        )
-        t = time.perf_counter() - t0
 
-        model.reset_cache()
-        print(tokenizer.decode(y.to("cpu").numpy().tolist()))
-        tokens_generated = y.size(0) - prompt_length
-        print(
-            f"Time for inference {i + 1}: {t:.02f} sec total, {tokens_generated / t:.02f} tokens/sec",
-            file=sys.stderr,
-        )
-    if fabric.device.type == "cuda":
-        print(
-            f"Memory used: {torch.cuda.max_memory_reserved() / 1e9:.02f} GB",
-            file=sys.stderr,
-        )
+    continue_ = True
+
+    while continue_:
+        encoded = torch.Tensor(tokenizer.encode(prompt)).long().to(fabric.device)
+
+        for i in range(num_samples):
+            y = generate(
+                model,
+                encoded,
+                max_new_tokens,
+                temperature=temperature,
+                top_k=top_k,
+                eos_id=tokenizer.eos_token_id,
+            )
+
+            model.reset_cache()
+            print(tokenizer.decode(y.to("cpu").numpy().tolist()))
+
+        if interactive:
+            prompt = input("")
+            if prompt == "":
+                continue_ = False
+        else:
+            continue_ = False
 
 
 if __name__ == "__main__":
