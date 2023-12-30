@@ -37,7 +37,7 @@ class LLaMaModule(LightningModule):
         return torch.optim.AdamW(self.parameters(), lr=self.conf.lr)
 
     def _loss_step(
-        self, step_name: str, batch: BatchDataPoint, _batch_idx
+        self, step_name: str, batch: BatchDataPoint, _batch_idx, accuracy: bool
     ) -> Float[Tensor, ""]:
         data, start_end = batch
 
@@ -51,13 +51,18 @@ class LLaMaModule(LightningModule):
 
         loss = F.cross_entropy(output_for_loss, target)
         self.log(f"{step_name}_loss", loss)
+
+        if accuracy:
+            acc = (output_for_loss.argmax(dim=-1) == target).float().mean()
+            self.log(f"{step_name}_token_accuracy", acc)
+
         return loss
 
     def training_step(self, batch: BatchDataPoint, _batch_idx) -> Float[Tensor, ""]:
-        return self._loss_step("train", batch, _batch_idx)
+        return self._loss_step("train", batch, _batch_idx, accuracy=False)
 
     def validation_step(self, batch: BatchDataPoint, _batch_idx) -> Float[Tensor, ""]:
-        return self._loss_step("val", batch, _batch_idx)
+        return self._loss_step("val", batch, _batch_idx, accuracy=True)
 
 
 @jaxtyped(typechecker=typechecker)
