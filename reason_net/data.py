@@ -27,12 +27,14 @@ class MathDataGen:
         if operand == "/":
             code = left + "//" + right
             output = str(eval(code))
-            real_code = left + "/" + right
+            real_code = left + "/" + right + "="
             return real_code, output
 
         else:
             code = left + operand + right
-            return code, str(eval(code))
+            output = str(eval(code))
+            real_code = left + operand + right + "="
+            return real_code, output
 
 
 class MathTokenizer:
@@ -41,11 +43,14 @@ class MathTokenizer:
     eos_token = "S"
     unknown_token = "U"
     operand = MathDataGen.operand
+    equal_token = "="
 
     def __init__(self) -> None:
         digits = [str(i) for i in range(self.max_digit)]
         self.anti_vocab: list[str] = (
-            digits + [op for op in self.operand] + [self.pad_token, self.eos_token]
+            digits
+            + [op for op in self.operand]
+            + [self.pad_token, self.eos_token, self.equal_token]
         )
         self.vocab = {term: i for i, term in enumerate(self.anti_vocab)}
 
