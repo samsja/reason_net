@@ -71,9 +71,6 @@ def get_real_data_mask(
     for i, start_end in enumerate(all_start_end):
         start = start_end[0]
         end = start_end[1]
-        try:
-            mask[i, start:end] = True
-        except IndexError:
-            pass
+        mask[i, start:end] = True
 
     return mask
