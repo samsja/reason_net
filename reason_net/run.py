@@ -51,7 +51,7 @@ def run(conf: RunConfig) -> tuple[LLaMaModule, MathDataModule]:
     wandb_logger = WandbLogger(save_dir=conf.trainer.save_dir)
 
     checkpoint_callback = ModelCheckpoint(
-        dirpath=conf.trainer.save_dir / Path(run.name),
+        dirpath=conf.trainer.save_dir / Path(run.name),  # type: ignore
         monitor="val_loss",
         filename="reason_net-{epoch:02d}-{val_loss:.2f}",
         save_top_k=2,

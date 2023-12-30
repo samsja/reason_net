@@ -103,8 +103,8 @@ class MathDataConfig(BaseModel):
 seq = TypeVar("seq")
 b = TypeVar("b")
 
-DataPoint: TypeAlias = tuple[Int[Tensor, "seq"], int]
-BatchDataPoint: TypeAlias = tuple[Int[Tensor, "b seq"], Int[Tensor, "b"]]
+DataPoint: TypeAlias = tuple[Int[Tensor, "seq"], tuple[int, int]]
+BatchDataPoint: TypeAlias = tuple[Int[Tensor, "b seq"], list[Int[Tensor, "b"]]]
 
 
 class MathDataModule(L.LightningDataModule):
@@ -118,14 +118,17 @@ class MathDataModule(L.LightningDataModule):
         self.generator = MathDataGen(self.conf.min, self.conf.max)
         self.tokenizer = MathTokenizer()
 
-    def _generate_data_point(self) -> tuple[list[int], int]:
+    def _generate_data_point(self) -> tuple[list[int], tuple[int, int]]:
         exo, resp = self.generator.generate()
         exo_tokenized = self.tokenizer.encode(exo)
         resp_tokenized = self.tokenizer.encode(resp)
 
-        return exo_tokenized + resp_tokenized + [self.tokenizer.eos_token_id], len(
-            exo_tokenized
-        )
+        data = exo_tokenized + resp_tokenized + [self.tokenizer.eos_token_id]
+
+        start = len(exo_tokenized)
+        end = len(data)
+
+        return data, (start, end)
 
     def setup(self, stage: str) -> None:
         # Assign train/val datasets for use in dataloaders
@@ -139,9 +142,9 @@ class MathDataModule(L.LightningDataModule):
 
         max_len = max([len(data) for data, _ in all_raw_data])
 
-        for data, cutoff in all_raw_data:
+        for data, start_end in all_raw_data:
             data += [self.tokenizer.pad_token_id] * (max_len - len(data))
-            all_data.append((torch.tensor(data).long(), cutoff))
+            all_data.append((torch.tensor(data).long(), start_end))
 
         self.dataset = ListDataset(all_data)
 

@@ -39,13 +39,15 @@ class LLaMaModule(LightningModule):
     def _loss_step(
         self, step_name: str, batch: BatchDataPoint, _batch_idx
     ) -> Float[Tensor, ""]:
-        data, all_cutoff = batch
+        data, start_end = batch
+
         output = self.forward(data)
 
-        cutoff_mask = get_cutoff_mask(all_cutoff, output.shape[1])
+        start_end_stack = torch.stack(start_end, dim=-1)
+        mask = get_real_data_mask(start_end_stack, output.shape[1])
 
-        output_for_loss = output[cutoff_mask]
-        target = data[cutoff_mask]
+        output_for_loss = output[mask]
+        target = data[mask]
 
         loss = F.cross_entropy(output_for_loss, target)
         self.log(f"{step_name}_loss", loss)
@@ -59,12 +61,19 @@ class LLaMaModule(LightningModule):
 
 
 @jaxtyped(typechecker=typechecker)
-def get_cutoff_mask(all_cutoff: Int[Tensor, "b"], seq: int) -> Bool[Tensor, "b seq"]:
-    b = all_cutoff.shape[0]
+def get_real_data_mask(
+    all_start_end: Int[Tensor, "b 2"], seq: int
+) -> Bool[Tensor, "b seq"]:
+    b = all_start_end.shape[0]
 
-    mask = torch.zeros(b, seq, dtype=torch.bool, device=all_cutoff.device)
+    mask = torch.zeros(b, seq, dtype=torch.bool, device=all_start_end[0].device)
 
-    for i, cutoff in enumerate(all_cutoff):
-        mask[i, cutoff:] = True
+    for i, start_end in enumerate(all_start_end):
+        start = start_end[0]
+        end = start_end[1]
+        try:
+            mask[i, start:end] = True
+        except IndexError:
+            pass
 
     return mask
