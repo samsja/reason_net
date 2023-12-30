@@ -53,8 +53,22 @@ class LLaMaModule(LightningModule):
         self.log(f"{step_name}_loss", loss)
 
         if accuracy:
-            acc = (output_for_loss.argmax(dim=-1) == target).float().mean()
-            self.log(f"{step_name}_token_accuracy", acc)
+            token_acc = (output_for_loss.argmax(dim=-1) == target).float().mean()
+            self.log(f"{step_name}_token_accuracy", token_acc)
+
+            output_for_acc = [
+                output[i, start:end] for i, (start, end) in enumerate(start_end_stack)
+            ]
+            target_for_acc = [
+                data[i, start:end] for i, (start, end) in enumerate(start_end_stack)
+            ]
+
+            acc_per_seq = [
+                (out.argmax(dim=-1) == tar).float().mean()
+                for out, tar in zip(output_for_acc, target_for_acc)
+            ]
+            seq_acc = torch.tensor(acc_per_seq).mean()
+            self.log(f"{step_name}_accuracy", seq_acc)
 
         return loss
 
