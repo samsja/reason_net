@@ -59,7 +59,7 @@ class MathTokenizer:
             return self.unknown_token
 
     def decode(self, x: list[int]) -> str:
-        decoded = list(map(lambda x: self.anti_vocab[x], list(x)))
+        decoded = list(map(lambda x: self._decode_caract(x), list(x)))
         return "".join(decoded)
 
     @property

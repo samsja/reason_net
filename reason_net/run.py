@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Literal
 import hydra
 from omegaconf import DictConfig, OmegaConf
@@ -29,7 +30,7 @@ class WandbConfig(BaseModel):
 class TrainerConfig(BaseModel):
     lightning: PlTrainerConfig
     wandb: WandbConfig
-    save_dir: str
+    save_dir: Path
 
 
 class RunConfig(BaseModel):
@@ -43,14 +44,14 @@ def run(conf: RunConfig) -> tuple[LLaMaModule, MathDataModule]:
     module = LLaMaModule(conf.module)
 
     if not (conf.trainer.wandb.enabled):
-        wandb.init(mode="disabled")  # type: ignore
+        run = wandb.init(project=conf.trainer.wandb.project_name, mode="disabled")  # type: ignore
+    else:
+        run = wandb.init(project=conf.trainer.wandb.project_name)  # type: ignore
 
-    wandb_logger = WandbLogger(
-        project=conf.trainer.wandb.project_name, save_dir=conf.trainer.save_dir
-    )
+    wandb_logger = WandbLogger(save_dir=conf.trainer.save_dir)
 
     checkpoint_callback = ModelCheckpoint(
-        dirpath=conf.trainer.save_dir,
+        dirpath=conf.trainer.save_dir / Path(run.name),
         monitor="val_loss",
         filename="reason_net-{epoch:02d}-{val_loss:.2f}",
         save_top_k=2,
