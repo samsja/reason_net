@@ -10,7 +10,7 @@ from jaxtyping import Int
 
 
 class MathDataGen:
-    operand = ["+", "/", "*", "%"]
+    operand = ["+", "-", "/", "*", "%"]
 
     def __init__(self, min: int, max: int):
         self.max = max

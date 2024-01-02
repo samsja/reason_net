@@ -1,0 +1,5 @@
+block_size: 64
+vocab_size: 17 # todo base this on MathTokenizer 
+n_layer: 3
+n_head: 2
+n_embd: 32

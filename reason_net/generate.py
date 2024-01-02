@@ -104,7 +104,7 @@ def get_config(file_path: Path) -> LLaMaConfig:
 @app.default
 def main(
     checkpoint_path: Path,
-    model_conf: Literal["2M", "14M", "70M"],
+    model_conf: Literal["2M", "14M", "70M", "100k"],
     prompt: str,
     *,
     interactive: bool = False,
