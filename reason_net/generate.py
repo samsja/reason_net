@@ -112,7 +112,7 @@ def main(
     max_new_tokens: int = 20,
     top_k: int = 200,
     temperature: float = 0.8,
-    precision: Literal["bf16-true", "32-true"] = "bf16-true",
+    precision: Literal["bf16-true", "32-true"] = "32-true",
 ) -> None:
     """Generates text samples based on a pre-trained LLaMA model."""
     fabric = L.Fabric(devices=1, precision=precision)  # type: ignore

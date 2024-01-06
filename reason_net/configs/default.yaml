@@ -15,7 +15,7 @@ module:
 trainer:
 
   lightning:
-    precision: "bf16-mixed"
+    precision: "32-true"
     max_epochs: 1
     log_every_n_steps: 1
     devices: 1
