@@ -36,6 +36,14 @@ class MathDataGen:
             real_code = left + operand + right + "="
             return real_code, output
 
+    def generate_n(self, n: int) -> list[tuple[str, str]]:
+        already_generated: set[tuple[str, str]] = set()
+
+        while len(already_generated) < n:
+            already_generated.add(self.generate())
+
+        return list(already_generated)
+
 
 class MathTokenizer:
     max_digit = 10
@@ -116,10 +124,13 @@ class MathDataModule(L.LightningDataModule):
 
     def prepare_data(self) -> None:
         self.generator = MathDataGen(self.conf.min, self.conf.max)
+        random.seed(self.conf.seed)
         self.tokenizer = MathTokenizer()
 
-    def _generate_data_point(self) -> tuple[list[int], tuple[int, int]]:
-        exo, resp = self.generator.generate()
+    def _process_data_point(
+        self, data_point: tuple[str, str]
+    ) -> tuple[list[int], tuple[int, int]]:
+        exo, resp = data_point
         exo_tokenized = self.tokenizer.encode(exo)
         resp_tokenized = self.tokenizer.encode(resp)
 
@@ -136,13 +147,14 @@ class MathDataModule(L.LightningDataModule):
         if stage != "fit":
             raise NotImplementedError(f"DataModule stage {stage} not implemented")
 
-        all_raw_data = [self._generate_data_point() for _ in range(self.conf.size)]
+        all_raw_data = self.generator.generate_n((self.conf.size))
+        all_processed_data = [self._process_data_point(data) for data in all_raw_data]
 
         all_data: list[DataPoint] = []
 
-        max_len = max([len(data) for data, _ in all_raw_data])
+        max_len = max([len(data) for data, _ in all_processed_data])
 
-        for data, start_end in all_raw_data:
+        for data, start_end in all_processed_data:
             data += [self.tokenizer.pad_token_id] * (max_len - len(data))
             all_data.append((torch.tensor(data).long(), start_end))
 
