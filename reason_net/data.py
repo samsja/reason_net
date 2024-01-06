@@ -7,6 +7,7 @@ from torch import Tensor
 import lightning as L
 from torch.utils.data import Dataset, random_split, DataLoader
 from jaxtyping import Int
+from tqdm import tqdm
 
 
 class MathDataGen:
@@ -39,8 +40,14 @@ class MathDataGen:
     def generate_n(self, n: int) -> list[tuple[str, str]]:
         already_generated: set[tuple[str, str]] = set()
 
+        pbar = tqdm(total=n)
         while len(already_generated) < n:
+            le = len(already_generated)
             already_generated.add(self.generate())
+            if len(already_generated) > le:
+                pbar.update(1)
+
+        pbar.close()
 
         return list(already_generated)
 
