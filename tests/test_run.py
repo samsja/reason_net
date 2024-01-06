@@ -12,7 +12,7 @@ def config() -> RunConfig:
         version_base=None,
         config_path="../reason_net/configs",
     ):
-        raw_conf = compose(config_name="default.yaml", overrides=["module/model=2M"])
+        raw_conf = compose(config_name="default.yaml", overrides=["module/model=910K"])
 
     conf = omegaconf_to_pydantic(raw_conf)
 
@@ -25,7 +25,7 @@ def config() -> RunConfig:
 
 
 def test_run(config: RunConfig, tmp_path):
-    config.trainer.save_dir = str(tmp_path)
+    config.trainer.save_dir = tmp_path
     module, data = run(config)
 
     if torch.cuda.is_available():
