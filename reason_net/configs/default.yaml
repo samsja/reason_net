@@ -3,8 +3,8 @@ defaults:
 
 data:
   min: 0
-  max: 10
-  batch_size: 1024
+  max: 6
+  batch_size: 8192 
   size: 1_000_000
   seed: 42
   num_workers: 4
@@ -16,7 +16,7 @@ trainer:
 
   lightning:
     precision: "32-true"
-    max_epochs: 1
+    max_epochs: 10
     log_every_n_steps: 1
     devices: 1
     val_check_interval: 0.1
