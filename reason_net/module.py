@@ -1,6 +1,7 @@
 from typing import TypeAlias, TypeVar
+from einops import rearrange
 
-from jaxtyping import Int, Float, Bool, jaxtyped
+from jaxtyping import Int, Float, jaxtyped
 from torch import Tensor
 import torch
 import torch.nn.functional as F
@@ -36,39 +37,26 @@ class LLaMaModule(LightningModule):
     def configure_optimizers(self) -> torch.optim.Optimizer:
         return torch.optim.AdamW(self.parameters(), lr=self.conf.lr)
 
+    @jaxtyped(typechecker=typechecker)
     def _loss_step(
         self, step_name: str, batch: BatchDataPoint, _batch_idx, accuracy: bool
     ) -> Float[Tensor, ""]:
-        data, start_end = batch
+        data, end_exo = batch
 
-        output = self.forward(data)
+        input = data[:, :-1]
+        target = data[:, 1:]
 
-        start_end_stack = torch.stack(start_end, dim=-1)
-        mask = get_real_data_mask(start_end_stack, output.shape[1])
+        logits = self.forward(input)
 
-        output_for_loss = output[mask]
-        target = data[mask]
+        flatten_logits = rearrange(logits, "b seq vocab -> (b seq) vocab")
+        flatten_target = rearrange(target, "b seq -> (b seq)")
 
-        loss = F.cross_entropy(output_for_loss, target)
+        loss = F.cross_entropy(flatten_logits, flatten_target, ignore_index=-1)
         self.log(f"{step_name}_loss", loss)
 
         if accuracy:
-            token_acc = (output_for_loss.argmax(dim=-1) == target).float().mean()
+            token_acc = (logits.argmax(dim=-1) == target).float().mean()
             self.log(f"{step_name}_token_accuracy", token_acc)
-
-            output_for_acc = [
-                output[i, start:end] for i, (start, end) in enumerate(start_end_stack)
-            ]
-            target_for_acc = [
-                data[i, start:end] for i, (start, end) in enumerate(start_end_stack)
-            ]
-
-            acc_per_seq = [
-                (out.argmax(dim=-1) == tar).float().mean()
-                for out, tar in zip(output_for_acc, target_for_acc)
-            ]
-            seq_acc = torch.tensor(acc_per_seq).mean()
-            self.log(f"{step_name}_accuracy", seq_acc)
 
         return loss
 
@@ -77,19 +65,3 @@ class LLaMaModule(LightningModule):
 
     def validation_step(self, batch: BatchDataPoint, _batch_idx) -> Float[Tensor, ""]:
         return self._loss_step("val", batch, _batch_idx, accuracy=True)
-
-
-@jaxtyped(typechecker=typechecker)
-def get_real_data_mask(
-    all_start_end: Int[Tensor, "b 2"], seq: int
-) -> Bool[Tensor, "b seq"]:
-    b = all_start_end.shape[0]
-
-    mask = torch.zeros(b, seq, dtype=torch.bool, device=all_start_end[0].device)
-
-    for i, start_end in enumerate(all_start_end):
-        start = start_end[0]
-        end = start_end[1]
-        mask[i, start:end] = True
-
-    return mask

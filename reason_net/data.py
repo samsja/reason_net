@@ -56,11 +56,17 @@ class MathTokenizer:
     def __init__(self) -> None:
         digits = [str(i) for i in range(self.max_digit)]
         self.anti_vocab: list[str] = (
-            digits
+            [self.pad_token, self.eos_token, self.equal_token]
+            + digits
             + [op for op in self.operand]
-            + [self.pad_token, self.eos_token, self.equal_token]
         )
         self.vocab = {term: i for i, term in enumerate(self.anti_vocab)}
+
+    def _encode_caract(self, x: str) -> int:
+        if x in self.vocab:
+            return self.vocab[x]
+        else:
+            return self.vocab[self.unknown_token]
 
     def encode(self, x: str) -> list[int]:
         return list(map(lambda x: self.vocab[x], list(x)))
@@ -72,7 +78,7 @@ class MathTokenizer:
             return self.unknown_token
 
     def decode(self, x: list[int]) -> str:
-        decoded = list(map(lambda x: self._decode_caract(x), list(x)))
+        decoded = [self._decode_caract(i) for i in x]
         return "".join(decoded)
 
     @property
@@ -111,8 +117,8 @@ class MathDataConfig(BaseModel):
 seq = TypeVar("seq")
 b = TypeVar("b")
 
-DataPoint: TypeAlias = tuple[Int[Tensor, "seq"], tuple[int, int]]
-BatchDataPoint: TypeAlias = tuple[Int[Tensor, "b seq"], list[Int[Tensor, "b"]]]
+DataPoint: TypeAlias = tuple[Int[Tensor, "seq"], int]
+BatchDataPoint: TypeAlias = list[Int[Tensor, "b seq"] | Int[Tensor, "b"]]
 
 
 class MathDataModule(L.LightningDataModule):
@@ -127,19 +133,16 @@ class MathDataModule(L.LightningDataModule):
         random.seed(self.conf.seed)
         self.tokenizer = MathTokenizer()
 
-    def _process_data_point(
-        self, data_point: tuple[str, str]
-    ) -> tuple[list[int], tuple[int, int]]:
+    def _process_data_point(self, data_point: tuple[str, str]) -> tuple[list[int], int]:
         exo, resp = data_point
         exo_tokenized = self.tokenizer.encode(exo)
         resp_tokenized = self.tokenizer.encode(resp)
 
         data = exo_tokenized + resp_tokenized + [self.tokenizer.eos_token_id]
 
-        start = len(exo_tokenized)
-        end = len(data)
+        exo_end = len(exo_tokenized)
 
-        return data, (start, end)
+        return data, exo_end
 
     def setup(self, stage: str) -> None:
         # Assign train/val datasets for use in dataloaders
@@ -154,9 +157,9 @@ class MathDataModule(L.LightningDataModule):
 
         max_len = max([len(data) for data, _ in all_processed_data])
 
-        for data, start_end in all_processed_data:
+        for data, exo_end in all_processed_data:
             data += [self.tokenizer.pad_token_id] * (max_len - len(data))
-            all_data.append((torch.tensor(data).long(), start_end))
+            all_data.append((torch.tensor(data).long(), exo_end))
 
         self.dataset = ListDataset(all_data)
 
