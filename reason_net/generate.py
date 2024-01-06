@@ -112,14 +112,9 @@ def main(
     max_new_tokens: int = 20,
     top_k: int = 200,
     temperature: float = 0.8,
+    precision: Literal["bf16-true", "32-true"] = "bf16-true",
 ) -> None:
     """Generates text samples based on a pre-trained LLaMA model."""
-
-    precision = (
-        "bf16-true"
-        if torch.cuda.is_available() and torch.cuda.is_bf16_supported()
-        else "32-true"
-    )
     fabric = L.Fabric(devices=1, precision=precision)  # type: ignore
 
     print("Loading model ...", file=sys.stderr)

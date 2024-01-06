@@ -15,7 +15,7 @@ from reason_net.module import LLaMaModule, ModuleConfig
 
 
 class PlTrainerConfig(BaseModel):
-    precision: Literal["bf16-mixed", "bf16-true"]
+    precision: Literal["bf16-mixed", "bf16-true", "32-true"]
     max_epochs: int
     log_every_n_steps: int
     devices: int
