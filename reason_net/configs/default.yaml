@@ -8,13 +8,13 @@ data:
   seed: 42
 
 module:
-  lr: 1e-2
+  lr: 1e-3
 
 trainer:
 
   lightning:
     precision: "32-true"
-    max_epochs: 10
+    max_epochs: 1
     log_every_n_steps: 1
     devices: 1
     val_check_interval: 0.1
