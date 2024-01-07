@@ -4,7 +4,7 @@ defaults:
 data:
   batch_size: 8192 
   num_workers: 4
-  dataset_path: datasets/data-100.txt
+  dataset_path: datasets/data-100m.txt
   seed: 42
 
 module:
