@@ -1,4 +1,5 @@
 use clap::Parser;
+use indicatif::ProgressBar;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use rustc_hash::FxHashSet;
@@ -49,18 +50,26 @@ fn generate_all(conf: Args) {
 
     let mut unique_exos: FxHashSet<String> = FxHashSet::default();
 
+    let progress_bar = ProgressBar::new(conf.size as u64);
+
     while unique_exos.len() < conf.size as usize {
         let datapoint: String = generate_datapoint(conf.min, conf.max, &mut rng);
-        unique_exos.insert(datapoint);
+        let added = unique_exos.insert(datapoint);
+        if added {
+            progress_bar.inc(1);
+        }
     }
 
-    for exo in unique_exos {
-        println!("{}", exo);
-    }
+    progress_bar.finish_with_message("done");
+
+    std::fs::write(
+        conf.save_file_path,
+        unique_exos.into_iter().collect::<Vec<String>>().join("\n"),
+    )
+    .unwrap();
 }
 
 fn main() {
     let args = Args::parse();
-    println!("{:?}", args);
     generate_all(args);
 }
