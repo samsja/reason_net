@@ -41,10 +41,8 @@ class LLaMaModule(LightningModule):
     def _loss_step(
         self, step_name: str, batch: BatchDataPoint, _batch_idx, accuracy: bool
     ) -> Float[Tensor, ""]:
-        data, end_exo = batch
-
-        input = data[:, :-1]
-        target = data[:, 1:]
+        input = batch[:, :-1]
+        target = batch[:, 1:]
 
         logits = self.forward(input)
 

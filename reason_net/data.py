@@ -6,8 +6,8 @@ import torch
 from torch import Tensor
 import lightning as L
 from torch.utils.data import Dataset, random_split, DataLoader
-from jaxtyping import Int
-from rich.progress import track
+from jaxtyping import Int, jaxtyped
+from beartype import beartype as typechecker
 
 
 class MathTokenizer:
@@ -59,17 +59,6 @@ class MathTokenizer:
         return len(self.vocab)
 
 
-class ListDataset(Dataset):
-    def __init__(self, data):
-        self.data = data
-
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, idx):
-        return self.data[idx]
-
-
 class MathDataConfig(BaseModel):
     seed: int
     batch_size: int
@@ -81,7 +70,44 @@ seq = TypeVar("seq")
 b = TypeVar("b")
 
 DataPoint: TypeAlias = tuple[Int[Tensor, "seq"], int]
-BatchDataPoint: TypeAlias = list[Int[Tensor, "b seq"] | Int[Tensor, "b"]]
+BatchDataPoint: TypeAlias = Int[Tensor, "b seq"]
+
+
+class MathDataset(Dataset):
+    def __init__(self, dataset_path: Path, tokenizer: MathTokenizer):
+        super().__init__()
+        self.tokenizer = tokenizer
+        self.raw_data = list()
+        with open(dataset_path, "r") as f:
+            for line in f:
+                self.raw_data.append(line.strip())
+
+    def __len__(self):
+        return len(self.raw_data)
+
+    def __getitem__(self, idx) -> list[int]:
+        data_point = self.raw_data[idx]
+        data = self.tokenizer.encode(data_point) + [self.tokenizer.eos_token_id]
+        return data
+
+
+class DataCollatorLangModeling:
+    def __init__(self, pad_token_id: int):
+        self.pad_token_id = pad_token_id
+
+    @jaxtyped(typechecker=typechecker)
+    def collate_batch(self, batch: list[list[int]]) -> Int[Tensor, "b seq"]:
+        max_length = max(len(item) for item in batch)
+
+        padded_batch = []
+
+        for item in batch:
+            num_padding = max_length - len(item)
+
+            padded_sequence = item + [self.pad_token_id] * num_padding
+            padded_batch.append(padded_sequence)
+
+        return torch.tensor(padded_batch)
 
 
 class MathDataModule(L.LightningDataModule):
@@ -93,45 +119,14 @@ class MathDataModule(L.LightningDataModule):
 
     def prepare_data(self) -> None:
         self.tokenizer = MathTokenizer()
-
-        self.raw_data = list()
-        with open(self.conf.dataset_path, "r") as f:
-            for line in f:
-                self.raw_data.append(line.strip())
-
-    def _process_data_point(self, data_point: str) -> tuple[list[int], int]:
-        exo, resp = data_point.split("=")
-        exo = exo + "="
-        exo_tokenized = self.tokenizer.encode(exo)
-        resp_tokenized = self.tokenizer.encode(resp)
-
-        data = exo_tokenized + resp_tokenized + [self.tokenizer.eos_token_id]
-
-        exo_end = len(exo_tokenized)
-
-        return data, exo_end
+        self.dataset = MathDataset(self.conf.dataset_path, self.tokenizer)
+        self.data_collator = DataCollatorLangModeling(self.tokenizer.pad_token_id)
 
     def setup(self, stage: str) -> None:
         # Assign train/val datasets for use in dataloaders
 
         if stage != "fit":
             raise NotImplementedError(f"DataModule stage {stage} not implemented")
-
-        all_raw_data = self.raw_data
-        all_processed_data = [
-            self._process_data_point(data)
-            for data in track(all_raw_data, description="Processing data")
-        ]
-
-        all_data: list[DataPoint] = []
-
-        max_len = max([len(data) for data, _ in all_processed_data])
-
-        for data, exo_end in all_processed_data:
-            data += [self.tokenizer.pad_token_id] * (max_len - len(data))
-            all_data.append((torch.tensor(data).long(), exo_end))
-
-        self.dataset = ListDataset(all_data)
 
         train_size = int(self.train_prop * len(self.dataset))
         val_size = len(self.dataset) - train_size
@@ -147,9 +142,13 @@ class MathDataModule(L.LightningDataModule):
             self.train,
             batch_size=self.conf.batch_size,
             num_workers=self.conf.num_workers,
+            collate_fn=self.data_collator.collate_batch,
         )
 
     def val_dataloader(self) -> DataLoader:
         return DataLoader(
-            self.val, batch_size=self.conf.batch_size, num_workers=self.conf.num_workers
+            self.val,
+            batch_size=self.conf.batch_size,
+            num_workers=self.conf.num_workers,
+            collate_fn=self.data_collator.collate_batch,
         )
