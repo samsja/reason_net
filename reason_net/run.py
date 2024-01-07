@@ -25,11 +25,11 @@ class PlTrainerConfig(BaseModel):
 class WandbConfig(BaseModel):
     enabled: bool
     project_name: str
+    name: str | None = None
 
 
 class TrainerConfig(BaseModel):
     lightning: PlTrainerConfig
-    wandb: WandbConfig
     save_dir: Path
 
 
@@ -37,16 +37,17 @@ class RunConfig(BaseModel):
     data: MathDataConfig
     module: ModuleConfig
     trainer: TrainerConfig
+    wandb: WandbConfig
 
 
 def run(conf: RunConfig) -> tuple[LLaMaModule, MathDataModule]:
     data = MathDataModule(conf.data)
     module = LLaMaModule(conf.module)
 
-    if not (conf.trainer.wandb.enabled):
-        run = wandb.init(project=conf.trainer.wandb.project_name, mode="disabled")  # type: ignore
+    if not (conf.wandb.enabled):
+        run = wandb.init(mode="disabled")  # type: ignore
     else:
-        run = wandb.init(project=conf.trainer.wandb.project_name)  # type: ignore
+        run = wandb.init(project=conf.wandb.project_name, name=conf.wandb.name)  # type: ignore
 
     wandb_logger = WandbLogger(save_dir=conf.trainer.save_dir)
 

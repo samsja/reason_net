@@ -19,7 +19,7 @@ def config() -> RunConfig:
 
     conf.trainer.lightning.max_epochs = 2
     conf.data.num_workers = 0
-    conf.trainer.wandb.enabled = False
+    conf.wandb.enabled = False
     conf.data.dataset_path = Path("tests/data-test.txt")
 
     return conf

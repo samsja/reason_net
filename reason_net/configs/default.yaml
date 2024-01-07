@@ -21,6 +21,7 @@ trainer:
     
   save_dir: "lightning_logs"
   
-  wandb:
-    enabled: true
-    project_name: "reason_net"
+wandb:
+  enabled: true
+  project_name: "reason_net"
+  name: null
