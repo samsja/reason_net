@@ -1,7 +1,10 @@
 import pytest
 import torch
+from reason_net.data.data_gen import MathDataGenConfig
 
 from reason_net.run import RunConfig, run, omegaconf_to_pydantic
+from reason_net.data.data_gen import omegaconf_to_pydantic as omegaconf_to_pydantic_data
+from reason_net.data.data_gen import generate as generate_data
 from reason_net.generate import generate
 from hydra import compose, initialize
 
@@ -17,14 +20,34 @@ def config() -> RunConfig:
     conf = omegaconf_to_pydantic(raw_conf)
 
     conf.trainer.lightning.max_epochs = 2
-    conf.data.size = 16
     conf.data.num_workers = 0
     conf.trainer.wandb.enabled = False
 
     return conf
 
 
-def test_run(config: RunConfig, tmp_path):
+@pytest.fixture
+def config_data() -> MathDataGenConfig:
+    with initialize(
+        version_base=None,
+        config_path="../reason_net/data/configs",
+    ):
+        raw_conf = compose(config_name="default.yaml")
+
+        conf = omegaconf_to_pydantic_data(raw_conf)
+
+        conf.size = 100
+
+        return conf
+
+
+def test_run(config: RunConfig, config_data: MathDataGenConfig, tmp_path):
+    config_data.save_file_path = tmp_path / "test.txt"
+
+    generate_data(config_data)
+
+    config.data.dataset_path = config_data.save_file_path
+
     config.trainer.save_dir = tmp_path
     module, data = run(config)
 

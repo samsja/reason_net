@@ -171,3 +171,4 @@ saved_models/*
 outputs/*
 lightning_logs/*
 checkpoints/*
+datasets/*

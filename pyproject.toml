@@ -16,6 +16,7 @@ pydantic = "^2.5.3"
 einops = "^0.7.0"
 beartype = "^0.16.4"
 cyclopts = "^1.2.0"
+rich = "^13.7.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.3.1"

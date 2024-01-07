@@ -1,4 +1,4 @@
-import random
+from pathlib import Path
 from typing import ClassVar, TypeAlias, TypeVar
 
 from pydantic import BaseModel
@@ -7,49 +7,9 @@ from torch import Tensor
 import lightning as L
 from torch.utils.data import Dataset, random_split, DataLoader
 from jaxtyping import Int
-from tqdm import tqdm
+from rich.progress import track
 
-
-class MathDataGen:
-    operand = ["+", "-", "/", "*", "%"]
-
-    def __init__(self, min: int, max: int):
-        self.max = max
-        self.min = min
-
-    def generate(self) -> tuple[str, str]:
-        i = random.randint(0, len(self.operand) - 1)
-
-        operand = self.operand[i]
-
-        left = str(random.randint(10**self.min, 10**self.max))
-        right = str(random.randint(10**self.min, 10**self.max))
-
-        if operand == "/":
-            code = left + "//" + right
-            output = str(eval(code))
-            real_code = left + "/" + right + "="
-            return real_code, output
-
-        else:
-            code = left + operand + right
-            output = str(eval(code))
-            real_code = left + operand + right + "="
-            return real_code, output
-
-    def generate_n(self, n: int) -> list[tuple[str, str]]:
-        already_generated: set[tuple[str, str]] = set()
-
-        pbar = tqdm(total=n)
-        while len(already_generated) < n:
-            le = len(already_generated)
-            already_generated.add(self.generate())
-            if len(already_generated) > le:
-                pbar.update(1)
-
-        pbar.close()
-
-        return list(already_generated)
+from reason_net.data.data_gen import MathDataGen
 
 
 class MathTokenizer:
@@ -113,12 +73,10 @@ class ListDataset(Dataset):
 
 
 class MathDataConfig(BaseModel):
-    min: int
-    max: int
-    size: int
     seed: int
     batch_size: int
     num_workers: int
+    dataset_path: Path
 
 
 seq = TypeVar("seq")
@@ -136,12 +94,16 @@ class MathDataModule(L.LightningDataModule):
         self.conf = conf
 
     def prepare_data(self) -> None:
-        self.generator = MathDataGen(self.conf.min, self.conf.max)
-        random.seed(self.conf.seed)
         self.tokenizer = MathTokenizer()
 
-    def _process_data_point(self, data_point: tuple[str, str]) -> tuple[list[int], int]:
-        exo, resp = data_point
+        self.raw_data = list()
+        with open(self.conf.dataset_path, "r") as f:
+            for line in f:
+                self.raw_data.append(line.strip())
+
+    def _process_data_point(self, data_point: str) -> tuple[list[int], int]:
+        exo, resp = data_point.split("=")
+        exo = exo + "="
         exo_tokenized = self.tokenizer.encode(exo)
         resp_tokenized = self.tokenizer.encode(resp)
 
@@ -157,8 +119,11 @@ class MathDataModule(L.LightningDataModule):
         if stage != "fit":
             raise NotImplementedError(f"DataModule stage {stage} not implemented")
 
-        all_raw_data = self.generator.generate_n((self.conf.size))
-        all_processed_data = [self._process_data_point(data) for data in all_raw_data]
+        all_raw_data = self.raw_data
+        all_processed_data = [
+            self._process_data_point(data)
+            for data in track(all_raw_data, description="Processing data")
+        ]
 
         all_data: list[DataPoint] = []
 

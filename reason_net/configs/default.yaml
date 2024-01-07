@@ -2,12 +2,10 @@ defaults:
   - module/model: 14M
 
 data:
-  min: 0
-  max: 6
   batch_size: 8192 
-  size: 1_000_000
-  seed: 42
   num_workers: 4
+  dataset_path: datasets/data-100.txt
+  seed: 42
 
 module:
   lr: 1e-2
