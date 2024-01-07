@@ -1,16 +1,23 @@
 # ReasonNet
 
+
+generate data
+
+```bash
+python reason_net/data/data_gen.py  --config-path configs --config-name default.yaml
+```
+
 how to run
 
 ```bash
-python reason_net/run.py --config-path configs --config-name default.yaml module/model=70M
+python reason_net/run.py --config-path configs --config-name default.yaml 
 ```
 
 
 With small model for test
 
 ```bash
-python reason_net/run.py --config-path configs --config-name default.yaml module/model=2M
+python reason_net/run.py --config-path configs --config-name default.yaml module/model=910K
 ```
 
 generate 

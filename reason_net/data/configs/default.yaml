@@ -1,6 +1,5 @@
   min: 0
   max: 6
-  # size: 1_000_000
-  size: 100
+  size: 100_000_000
   seed: 42
   save_file_path: datasets/data-${size}.txt
