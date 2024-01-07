@@ -8,6 +8,7 @@ import lightning as L
 from torch.utils.data import Dataset, random_split, DataLoader
 from jaxtyping import Int, jaxtyped
 from beartype import beartype as typechecker
+import numpy as np
 
 
 class MathTokenizer:
@@ -77,16 +78,19 @@ class MathDataset(Dataset):
     def __init__(self, dataset_path: Path, tokenizer: MathTokenizer):
         super().__init__()
         self.tokenizer = tokenizer
-        self.raw_data = list()
+        raw_data = list()
         with open(dataset_path, "r") as f:
             for line in f:
-                self.raw_data.append(line.strip())
+                raw_data.append(line.strip())
+
+        self.data = np.array(raw_data)
+        # seeh her why np array and not list https://docs.aws.amazon.com/codeguru/detector-library/python/pytorch-data-loader-with-multiple-workers/ # noqa: E501
 
     def __len__(self):
-        return len(self.raw_data)
+        return len(self.data)
 
     def __getitem__(self, idx) -> list[int]:
-        data_point = self.raw_data[idx]
+        data_point = self.data[idx]
         data = self.tokenizer.encode(data_point) + [self.tokenizer.eos_token_id]
         return data
 
