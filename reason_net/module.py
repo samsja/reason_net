@@ -9,7 +9,7 @@ from lightning import LightningModule
 from beartype import beartype as typechecker
 from pydantic import BaseModel
 
-from reason_net.data.data import BatchDataPoint
+from reason_net.data import BatchDataPoint
 from reason_net.llama import LLaMA, LLaMaConfig
 
 seq = TypeVar("seq")

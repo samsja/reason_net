@@ -11,7 +11,7 @@ import torch
 from cyclopts import App
 from jaxtyping import Int
 
-from reason_net.data.data import MathTokenizer
+from reason_net.data import MathTokenizer
 from reason_net.llama import Index, LLaMA, LLaMaConfig
 from reason_net.module import LLaMaModule, ModuleConfig
 

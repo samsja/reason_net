@@ -4,10 +4,13 @@
 generate data
 
 ```bash
-python reason_net/data/data_gen.py  --config-path configs --config-name default.yaml
+cd data_gen
+cargo run --release -- --min 0 --max 6 --size 100000000 --seed 32 --save-file-path data-100m.txt
+mv data-100m.txt ../datasets/.
 ```
 
-how to run
+run the training
+
 
 ```bash
 python reason_net/run.py --config-path configs --config-name default.yaml 

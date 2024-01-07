@@ -9,15 +9,13 @@ from torch.utils.data import Dataset, random_split, DataLoader
 from jaxtyping import Int
 from rich.progress import track
 
-from reason_net.data.data_gen import MathDataGen
-
 
 class MathTokenizer:
     max_digit = 10
     pad_token = "P"
     eos_token = "S"
     unknown_token = "U"
-    operand = MathDataGen.operand
+    operand = ["+", "-", "/", "*", "%"]
     equal_token = "="
 
     def __init__(self) -> None:

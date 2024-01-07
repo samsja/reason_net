@@ -10,7 +10,7 @@ from lightning.pytorch.callbacks import ModelCheckpoint, Callback
 import torch
 import wandb
 
-from reason_net.data.data import MathDataModule, MathDataConfig
+from reason_net.data import MathDataModule, MathDataConfig
 from reason_net.module import LLaMaModule, ModuleConfig
 
 
