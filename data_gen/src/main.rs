@@ -1,12 +1,12 @@
 use clap::Parser;
-use rand::{Rng, SeedableRng};
 use rand::rngs::StdRng;
+use rand::{Rng, SeedableRng};
+use rustc_hash::FxHashSet;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-
     #[arg(long)]
     min: u32,
 
@@ -21,12 +21,9 @@ struct Args {
 
     #[arg(long)]
     save_file_path: String,
-
 }
 
-
 fn generate_datapoint(min: u32, max: u32, rng: &mut StdRng) -> String {
-
     let min_val = 10i64.pow(min);
     let max_val = 10i64.pow(max);
 
@@ -36,24 +33,29 @@ fn generate_datapoint(min: u32, max: u32, rng: &mut StdRng) -> String {
     let operand = rng.gen_range(0..5);
 
     let exo = match operand {
-        0 => format!("{a}+{b}={}", a+b),
-        1 => format!("{a}-{b}={}", a-b),
-        2 => format!("{a}*{b}={}", a*b),
-        3 => format!("{a}/{b}={}", a/b),
-        4 => format!("{a}%{b}={}", a%b),
+        0 => format!("{a}+{b}={}", a + b),
+        1 => format!("{a}-{b}={}", a - b),
+        2 => format!("{a}*{b}={}", a * b),
+        3 => format!("{a}/{b}={}", a / b),
+        4 => format!("{a}%{b}={}", a % b),
         _ => panic!("Invalid operand"),
     };
 
     exo
-
 }
 
 fn generate_all(conf: Args) {
     let mut rng = StdRng::seed_from_u64(conf.seed);
 
-    for _ in 0..conf.size {
-        let datapoint = generate_datapoint(conf.min, conf.max, &mut rng);
-        println!("{}", datapoint);
+    let mut unique_exos: FxHashSet<String> = FxHashSet::default();
+
+    while unique_exos.len() < conf.size as usize {
+        let datapoint: String = generate_datapoint(conf.min, conf.max, &mut rng);
+        unique_exos.insert(datapoint);
+    }
+
+    for exo in unique_exos {
+        println!("{}", exo);
     }
 }
 

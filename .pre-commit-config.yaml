@@ -18,3 +18,11 @@ repos:
     rev: v1.8.0  # Use the sha / tag you want to point at
     hooks:
     -   id: mypy
+-   repo: local
+    hooks:
+    -   id: rust-fmt
+        name: Rust format
+        entry: rustfmt
+        language: system
+        files: \.rs$
+        pass_filenames: true
