@@ -31,6 +31,7 @@ class WandbConfig(BaseModel):
 class TrainerConfig(BaseModel):
     lightning: PlTrainerConfig
     save_dir: Path
+    checkpoint_path: Path | None
 
 
 class RunConfig(BaseModel):
@@ -65,7 +66,7 @@ def run(conf: RunConfig) -> tuple[LLaMaModule, MathDataModule]:
         **conf.trainer.lightning.model_dump(), logger=wandb_logger, callbacks=callbacks
     )
 
-    trainer.fit(module, data)
+    trainer.fit(module, data, ckpt_path=conf.trainer.checkpoint_path)
 
     return module, data
 

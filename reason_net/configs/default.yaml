@@ -20,6 +20,7 @@ trainer:
     val_check_interval: 0.1
     
   save_dir: "lightning_logs"
+  checkpoint_path: null
   
 wandb:
   enabled: true
