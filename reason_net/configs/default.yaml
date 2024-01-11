@@ -2,7 +2,7 @@ defaults:
   - module/model: 14M
 
 data:
-  batch_size: 8192 
+  batch_size: 12288 
   num_workers: 4
   dataset_path: datasets/data-100m.txt
   seed: 42
@@ -13,7 +13,7 @@ module:
 trainer:
 
   lightning:
-    precision: "32-true"
+    precision: "bf16-mixed"
     max_epochs: 1
     log_every_n_steps: 1
     devices: 1
@@ -21,7 +21,7 @@ trainer:
     
   save_dir: "lightning_logs"
   checkpoint_path: null
-  
+
 wandb:
   enabled: true
   project_name: "reason_net"
