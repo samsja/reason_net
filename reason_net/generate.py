@@ -52,7 +52,7 @@ def generate(
     T = idx.size(0)
     T_new = T + max_new_tokens
     if max_seq_length is None:
-        max_seq_length = min(T_new, model.conf.block_size)
+        max_seq_length = T_new
 
     device, dtype = idx.device, idx.dtype
     # create an empty tensor of the expected final shape and fill in the current tokens
@@ -66,7 +66,7 @@ def generate(
         x = idx.index_select(0, input_pos).view(1, -1)
 
         # forward
-        logits = model(x, max_seq_length, input_pos)
+        logits = model(x)
         logits = logits[0, -1] / temperature
 
         # optionally crop the logits to only the top k options

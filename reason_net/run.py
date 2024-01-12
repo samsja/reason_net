@@ -65,8 +65,10 @@ def run(conf: RunConfig) -> tuple[LLaMaModule, MathDataModule]:
     trainer = Trainer(
         **conf.trainer.lightning.model_dump(), logger=wandb_logger, callbacks=callbacks
     )
-
-    trainer.fit(module, data, ckpt_path=conf.trainer.checkpoint_path)
+    ckpt_path = (
+        str(conf.trainer.checkpoint_path) if conf.trainer.checkpoint_path else None
+    )
+    trainer.fit(module, data, ckpt_path=ckpt_path)
 
     return module, data
 
