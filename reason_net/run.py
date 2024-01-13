@@ -59,6 +59,7 @@ def run(conf: RunConfig) -> tuple[NormalModule, MathDataModule]:
         run = wandb.init(project=conf.wandb.project_name, name=conf.wandb.name)  # type: ignore
 
     wandb_logger = WandbLogger(save_dir=conf.trainer.save_dir)
+    wandb_logger.log_hyperparams(conf.model_dump())
 
     checkpoint_callback = ModelCheckpoint(
         dirpath=conf.trainer.save_dir / Path(run.name),  # type: ignore
