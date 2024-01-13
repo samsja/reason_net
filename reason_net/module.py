@@ -58,7 +58,12 @@ class NormalModule(LightningModule):
         self.log(f"{step_name}_loss", loss)
 
         if accuracy:
-            token_acc = (logits.argmax(dim=-1) == target).float().mean()
+            ignore_mask = target != self.tokenizer.pad_token_id
+            token_acc = (
+                (logits.argmax(dim=-1)[ignore_mask] == target[ignore_mask])
+                .float()
+                .mean()
+            )
             self.log(f"{step_name}_token_accuracy", token_acc)
 
         return loss
