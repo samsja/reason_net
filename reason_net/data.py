@@ -1,5 +1,6 @@
+from collections import defaultdict
 from pathlib import Path
-from typing import ClassVar, TypeAlias, TypeVar
+from typing import ClassVar, TypeAlias, TypeVar, TypedDict
 
 from pydantic import BaseModel
 import torch
@@ -70,8 +71,16 @@ class MathDataConfig(BaseModel):
 seq = TypeVar("seq")
 b = TypeVar("b")
 
-DataPoint: TypeAlias = tuple[Int[Tensor, "seq"], int]
-BatchDataPoint: TypeAlias = Int[Tensor, "b seq"]
+
+class MathOutputDict(TypedDict):
+    cutoff: int
+
+
+class MathOutputDictBatch(TypedDict):
+    cutoff: list[int]
+
+
+MathDataSetOutput: TypeAlias = tuple[list[int], MathOutputDict]
 
 
 class MathDataset(Dataset):
@@ -89,10 +98,19 @@ class MathDataset(Dataset):
     def __len__(self):
         return len(self.data)
 
-    def __getitem__(self, idx) -> list[int]:
-        data_point = self.data[idx]
-        data = self.tokenizer.encode(data_point) + [self.tokenizer.eos_token_id]
-        return data
+    def __getitem__(self, idx) -> MathDataSetOutput:
+        data_point: str = self.data[idx]
+
+        [left, right] = data_point.split("=")
+
+        data_left = self.tokenizer.encode(left)
+        data_right = self.tokenizer.encode(right)
+
+        data = data_left + data_right + [self.tokenizer.eos_token_id]
+        return data, {"cutoff": len(data_left)}
+
+
+BatchDataPoint: TypeAlias = tuple[Int[Tensor, "b seq"], MathOutputDictBatch]
 
 
 class DataCollatorLangModeling:
@@ -100,18 +118,23 @@ class DataCollatorLangModeling:
         self.pad_token_id = pad_token_id
 
     @jaxtyped(typechecker=typechecker)
-    def collate_batch(self, batch: list[list[int]]) -> Int[Tensor, "b seq"]:
-        max_length = max(len(item) for item in batch)
+    def collate_batch(self, batch: list[MathDataSetOutput]) -> BatchDataPoint:
+        max_length = max(len(item) for item, _ in batch)
 
         padded_batch = []
 
-        for item in batch:
+        dict_data: MathOutputDictBatch = defaultdict(list)  # type: ignore
+
+        for item, dict_item in batch:
             num_padding = max_length - len(item)
 
             padded_sequence = item + [self.pad_token_id] * num_padding
             padded_batch.append(padded_sequence)
 
-        return torch.tensor(padded_batch)
+            for key in dict_item.keys():
+                dict_data[key].append(dict_item[key])  # type: ignore
+
+        return torch.tensor(padded_batch), dict_data
 
 
 class MathDataModule(L.LightningDataModule):
