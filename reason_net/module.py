@@ -53,7 +53,7 @@ class NormalModule(LightningModule):
         flatten_target = rearrange(target, "b seq -> (b seq)")
 
         loss = F.cross_entropy(
-            flatten_logits, flatten_target, ignore_index=-self.tokenizer.pad_token_id
+            flatten_logits, flatten_target, ignore_index=self.tokenizer.pad_token_id
         )
         self.log(f"{step_name}_loss", loss)
 
