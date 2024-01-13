@@ -1,8 +1,9 @@
 from pathlib import Path
 from typing import Literal
+from typing_extensions import Self
 import hydra
 from omegaconf import DictConfig, OmegaConf
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from lightning import Trainer
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.callbacks import ModelCheckpoint, Callback
@@ -11,7 +12,7 @@ import torch
 import wandb
 
 from reason_net.data import MathDataModule, MathDataConfig
-from reason_net.module import LLaMaModule, ModuleConfig
+from reason_net.module import NAME_TO_MODULE, NormalModule, ModuleConfig
 
 
 class PlTrainerConfig(BaseModel):
@@ -37,13 +38,20 @@ class TrainerConfig(BaseModel):
 class RunConfig(BaseModel):
     data: MathDataConfig
     module: ModuleConfig
+    module_name: Literal["normal", "reason"]
     trainer: TrainerConfig
     wandb: WandbConfig
 
+    @model_validator(mode="after")
+    def reason_net_data(self) -> Self:
+        if self.module_name == "reason":
+            self.data.dataset_config.reason_net_data = True
+        return self
 
-def run(conf: RunConfig) -> tuple[LLaMaModule, MathDataModule]:
+
+def run(conf: RunConfig) -> tuple[NormalModule, MathDataModule]:
     data = MathDataModule(conf.data)
-    module = LLaMaModule(conf.module)
+    module = NAME_TO_MODULE[conf.module_name](conf.module, data.tokenizer)
 
     if not (conf.wandb.enabled):
         run = wandb.init(mode="disabled")  # type: ignore

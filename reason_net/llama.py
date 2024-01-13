@@ -36,8 +36,8 @@ def find_multiple(n: int, k: int) -> int:
 
 class LLaMaConfig(BaseModel):
     block_size: int
-    vocab_size: int
-    padded_vocab_size: int
+    vocab_size: int | None = None
+    padded_vocab_size: int = 64
     n_layer: int
     n_head: int
     n_embd: int

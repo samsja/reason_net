@@ -1,8 +1,9 @@
+from __future__ import annotations
 from collections import defaultdict
 from pathlib import Path
 from typing import ClassVar, TypeAlias, TypeVar, TypedDict
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 import torch
 from torch import Tensor
 import lightning as L
@@ -19,11 +20,12 @@ class MathTokenizer:
     unknown_token = "U"
     operand = ["+", "-", "/", "*", "%"]
     equal_token = "="
+    reason_token = "R"
 
     def __init__(self) -> None:
         digits = [str(i) for i in range(self.max_digit)]
         self.anti_vocab: list[str] = (
-            [self.pad_token, self.eos_token, self.equal_token]
+            [self.pad_token, self.eos_token, self.equal_token, self.reason_token]
             + digits
             + [op for op in self.operand]
         )
@@ -57,8 +59,19 @@ class MathTokenizer:
         return self.vocab[self.eos_token]
 
     @property
+    def reason_token_id(self) -> int:
+        return self.vocab[self.reason_token]
+
+    @property
     def vocab_size(self) -> int:
         return len(self.vocab)
+
+
+class MathDatasetConfig(BaseModel):
+    model_config = ConfigDict(validate_assignment=True)
+
+    reason_net_data: bool = False
+    reason_net_token_num: int
 
 
 class MathDataConfig(BaseModel):
@@ -67,6 +80,8 @@ class MathDataConfig(BaseModel):
     num_workers: int
     dataset_path: Path
 
+    dataset_config: MathDatasetConfig
+
 
 seq = TypeVar("seq")
 b = TypeVar("b")
@@ -74,18 +89,23 @@ b = TypeVar("b")
 
 class MathOutputDict(TypedDict):
     cutoff: int
+    reason_token_num: int
 
 
 class MathOutputDictBatch(TypedDict):
     cutoff: list[int]
+    reason_token_num: list[int]
 
 
 MathDataSetOutput: TypeAlias = tuple[list[int], MathOutputDict]
 
 
 class MathDataset(Dataset):
-    def __init__(self, dataset_path: Path, tokenizer: MathTokenizer):
+    def __init__(
+        self, dataset_path: Path, tokenizer: MathTokenizer, config: MathDatasetConfig
+    ):
         super().__init__()
+        self.config = config
         self.tokenizer = tokenizer
         raw_data = list()
         with open(dataset_path, "r") as f:
@@ -106,8 +126,20 @@ class MathDataset(Dataset):
         data_left = self.tokenizer.encode(left)
         data_right = self.tokenizer.encode(right)
 
-        data = data_left + data_right + [self.tokenizer.eos_token_id]
-        return data, {"cutoff": len(data_left)}
+        if self.config.reason_net_data:
+            data = (
+                data_left
+                + [self.tokenizer.reason_token_id] * self.config.reason_net_token_num
+                + data_right
+                + [self.tokenizer.eos_token_id]
+            )
+            return data, {
+                "cutoff": len(data_left),
+                "reason_token_num": self.config.reason_net_token_num,
+            }
+        else:
+            data = data_left + data_right + [self.tokenizer.eos_token_id]
+            return data, {"cutoff": len(data_left), "reason_token_num": 0}
 
 
 BatchDataPoint: TypeAlias = tuple[Int[Tensor, "b seq"], MathOutputDictBatch]
@@ -143,10 +175,12 @@ class MathDataModule(L.LightningDataModule):
     def __init__(self, conf: MathDataConfig):
         super().__init__()
         self.conf = conf
+        self.tokenizer = MathTokenizer()
 
     def prepare_data(self) -> None:
-        self.tokenizer = MathTokenizer()
-        self.dataset = MathDataset(self.conf.dataset_path, self.tokenizer)
+        self.dataset = MathDataset(
+            self.conf.dataset_path, self.tokenizer, self.conf.dataset_config
+        )
         self.data_collator = DataCollatorLangModeling(self.tokenizer.pad_token_id)
 
     def setup(self, stage: str) -> None:
