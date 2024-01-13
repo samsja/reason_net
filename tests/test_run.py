@@ -19,14 +19,18 @@ def raw_config() -> DictConfig:
     return raw_conf
 
 
+def _init_config(cfg: DictConfig, tmp_path: Path) -> DictConfig:
+    cfg.trainer.save_dir = tmp_path
+    cfg.trainer.lightning.max_epochs = 2
+    cfg.data.num_workers = 0
+    cfg.wandb.enabled = False
+    cfg.data.dataset_path = Path("tests/data-test.txt")
+    return cfg
+
+
 @pytest.mark.parametrize("module_name", ["normal", "reason"])
 def test_run(raw_config: DictConfig, tmp_path: Path, module_name: str):
-    raw_config.trainer.save_dir = tmp_path
-    raw_config.trainer.lightning.max_epochs = 2
-    raw_config.data.num_workers = 0
-    raw_config.wandb.enabled = False
-    raw_config.data.dataset_path = Path("tests/data-test.txt")
-    raw_config.module_name = module_name
+    raw_config = _init_config(raw_config, tmp_path)
 
     config = omegaconf_to_pydantic(raw_config)
     module, data = run(config)
