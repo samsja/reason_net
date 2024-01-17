@@ -105,11 +105,10 @@ def get_config(file_path: Path) -> LLaMaConfig:
 def main(
     checkpoint_path: Path,
     model_conf: Literal["2M", "14M", "70M", "100k"],
-    prompt: str,
     *,
-    interactive: bool = False,
     num_samples: int = 1,
     max_new_tokens: int = 20,
+    num_reason_token: Optional[int] = None,
     top_k: int = 200,
     temperature: float = 0.8,
     precision: Literal["bf16-true", "32-true"] = "32-true",
@@ -138,6 +137,13 @@ def main(
     continue_ = True
 
     while continue_:
+        prompt = input("")
+        if prompt == "":
+            break
+
+        if num_reason_token is not None:
+            prompt = prompt + tokenizer.reason_token * num_reason_token
+
         encoded = torch.Tensor(tokenizer.encode(prompt)).long().to(fabric.device)
 
         for i in range(num_samples):
@@ -149,16 +155,7 @@ def main(
                 top_k=top_k,
                 eos_id=tokenizer.eos_token_id,
             )
-
-            model.reset_cache()
             print(tokenizer.decode(y.to("cpu").numpy().tolist()))
-
-        if interactive:
-            prompt = input("")
-            if prompt == "":
-                continue_ = False
-        else:
-            continue_ = False
 
 
 if __name__ == "__main__":
