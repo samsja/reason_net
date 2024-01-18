@@ -108,7 +108,7 @@ def main(
     *,
     num_samples: int = 1,
     max_new_tokens: int = 20,
-    num_reason_token: Optional[int] = None,
+    num_reason_token: int | None = None,
     top_k: int = 200,
     temperature: float = 0.8,
     precision: Literal["bf16-true", "32-true"] = "32-true",

@@ -609,13 +609,13 @@ test = ["pytest"]
 
 [[package]]
 name = "cyclopts"
-version = "1.2.0"
+version = "2.1.2"
 description = ""
 optional = false
 python-versions = ">=3.8,<4.0"
 files = [
-    {file = "cyclopts-1.2.0-py3-none-any.whl", hash = "sha256:35f34756b4b71336c8db137fce42c33f42cf9cbfc8b137bcf059422430ab11e9"},
-    {file = "cyclopts-1.2.0.tar.gz", hash = "sha256:64133f745ad1082a143190e9bc21e5a51887fc87bbd555d5b941c0a4ddaea1e4"},
+    {file = "cyclopts-2.1.2-py3-none-any.whl", hash = "sha256:21833d9cb29e9fc4dccf2a5da207a7c7d2c671b70dad56427a679512b476a490"},
+    {file = "cyclopts-2.1.2.tar.gz", hash = "sha256:8f193c8815f221b78cb74fafa5f74b404f8527d220c5c148060c1927ba4b1e02"},
 ]
 
 [package.dependencies]
@@ -3735,4 +3735,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "66d8f46b8e2eacd24d7b195cefcf0e61173a70a9c52c4911429a133349179b74"
+content-hash = "629b506d841309ad6956b57dc8cc7d5ff145af97f013a59963ec2144ae7aefe1"
