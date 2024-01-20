@@ -28,11 +28,12 @@ def _init_config(cfg: DictConfig, tmp_path: Path) -> DictConfig:
     return cfg
 
 
-@pytest.mark.parametrize("module_name", ["normal", "reason"])
-def test_run(raw_config: DictConfig, tmp_path: Path, module_name: str):
+@pytest.mark.parametrize("reason_mode", [False, True])
+def test_run(raw_config: DictConfig, tmp_path: Path, reason_mode: bool):
     raw_config = _init_config(raw_config, tmp_path)
 
     config = omegaconf_to_pydantic(raw_config)
+    config.reason_mode = reason_mode
     module, data = run(config)
 
     if torch.cuda.is_available():

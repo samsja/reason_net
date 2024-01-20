@@ -1,9 +1,10 @@
 from __future__ import annotations
 from collections import defaultdict
 from pathlib import Path
-from typing import ClassVar, TypeAlias, TypeVar, TypedDict
+from typing import Any, ClassVar, TypeAlias, TypeVar
+import typing
 
-from pydantic import BaseModel, ConfigDict
+from reason_net.pydantic_conf import Config
 import torch
 from torch import Tensor
 import lightning as L
@@ -67,45 +68,29 @@ class MathTokenizer:
         return len(self.vocab)
 
 
-class MathDatasetConfig(BaseModel):
-    model_config = ConfigDict(validate_assignment=True)
-
-    reason_net_data: bool = False
-    reason_net_token_num: int
-
-
-class MathDataConfig(BaseModel):
+class MathDataConfig(Config):
     seed: int
     batch_size: int
     num_workers: int
     dataset_path: Path
-
-    dataset_config: MathDatasetConfig
+    reason_net_data: bool = False
+    reason_net_token_num: int
 
 
 seq = TypeVar("seq")
 b = TypeVar("b")
 
 
-class MathOutputDict(TypedDict):
-    cutoff: int
-    reason_token_num: int
-
-
-class MathOutputDictBatch(TypedDict):
-    cutoff: list[int]
-    reason_token_num: list[int]
-
-
-MathDataSetOutput: TypeAlias = tuple[list[int], MathOutputDict]
+DatasetOutput: TypeAlias = tuple[list[int], dict[str, int]]
 
 
 class MathDataset(Dataset):
     def __init__(
-        self, dataset_path: Path, tokenizer: MathTokenizer, config: MathDatasetConfig
+        self,
+        dataset_path: Path,
+        tokenizer: MathTokenizer,
     ):
         super().__init__()
-        self.config = config
         self.tokenizer = tokenizer
         raw_data = list()
         with open(dataset_path, "r") as f:
@@ -118,7 +103,7 @@ class MathDataset(Dataset):
     def __len__(self):
         return len(self.data)
 
-    def __getitem__(self, idx) -> MathDataSetOutput:
+    def __getitem__(self, idx) -> DatasetOutput:
         data_point: str = self.data[idx]
 
         [left, right] = data_point.split("=")
@@ -126,23 +111,38 @@ class MathDataset(Dataset):
         data_left = self.tokenizer.encode(left)
         data_right = self.tokenizer.encode(right)
 
-        if self.config.reason_net_data:
-            data = (
-                data_left
-                + [self.tokenizer.reason_token_id] * self.config.reason_net_token_num
-                + data_right
-                + [self.tokenizer.eos_token_id]
-            )
-            return data, {
-                "cutoff": len(data_left),
-                "reason_token_num": self.config.reason_net_token_num,
-            }
-        else:
-            data = data_left + data_right + [self.tokenizer.eos_token_id]
-            return data, {"cutoff": len(data_left), "reason_token_num": 0}
+        data = data_left + data_right + [self.tokenizer.eos_token_id]
+        return data, {"cutoff": len(data_left)}
 
 
-BatchDataPoint: TypeAlias = tuple[Int[Tensor, "b seq"], MathOutputDictBatch]
+class MathDatasetReason(MathDataset):
+    def __init__(
+        self, dataset_path: Path, tokenizer: MathTokenizer, reason_net_token_num: int
+    ):
+        self.reason_net_token_num = reason_net_token_num
+        super().__init__(dataset_path, tokenizer)
+
+    def __getitem__(self, idx) -> DatasetOutput:
+        data_point: str = self.data[idx]
+
+        [left, right] = data_point.split("=")
+
+        data_left = self.tokenizer.encode(left)
+        data_right = self.tokenizer.encode(right)
+
+        data = (
+            data_left
+            + [self.tokenizer.reason_token_id] * self.reason_net_token_num
+            + data_right
+            + [self.tokenizer.eos_token_id]
+        )
+        return data, {
+            "cutoff": len(data_left),
+            "reason_net_token_num": self.reason_net_token_num,
+        }
+
+
+BatchDataPoint: TypeAlias = tuple[Int[Tensor, "b seq"], dict[str, Any]]
 
 
 class DataCollatorLangModeling:
@@ -150,12 +150,12 @@ class DataCollatorLangModeling:
         self.pad_token_id = pad_token_id
 
     @jaxtyped(typechecker=typechecker)
-    def collate_batch(self, batch: list[MathDataSetOutput]) -> BatchDataPoint:
+    def collate_batch(self, batch: list[DatasetOutput]) -> BatchDataPoint:
         max_length = max(len(item) for item, _ in batch)
 
         padded_batch = []
 
-        dict_data: MathOutputDictBatch = defaultdict(list)  # type: ignore
+        dict_data = defaultdict(list)
 
         for item, dict_item in batch:
             num_padding = max_length - len(item)
@@ -164,9 +164,98 @@ class DataCollatorLangModeling:
             padded_batch.append(padded_sequence)
 
             for key in dict_item.keys():
-                dict_data[key].append(dict_item[key])  # type: ignore
+                dict_data[key].append(dict_item[key])
 
         return torch.tensor(padded_batch), dict_data
+
+
+"""
+        target = -100 * torch.ones((B, T - 1), dtype=torch.long, device=data.device)
+
+        for b in range(B):
+            cutoff = dict_data["cutoff"][b]
+            reason_net_token_num = dict_data["reason_net_token_num"][b]
+
+            assert cutoff > 0, "cutoff should be greater than 0"
+
+            # everything before the equal sign is treated normally
+            # aka target is the next token
+            target[b, 0:cutoff] = data[b, 1 : cutoff + 1]
+
+            last_reason_token_pos = cutoff + reason_net_token_num
+            first_reason_token_pos = cutoff + 1
+            # target for the equal token is the token after the last reason token
+            target[b, cutoff] = data[b, last_reason_token_pos + 1]
+
+            # target for the reason token is the pad token, because we want to ignore it
+            target[
+                b, first_reason_token_pos : last_reason_token_pos + 1
+            ] = self.tokenizer.pad_token_id
+
+            # target for everything after the reason token is treated normally
+            # aka target is the next token
+            rest_roken = last_reason_token_pos + 1
+            target[b, rest_roken:] = data[b, rest_roken + 1 :]
+
+        assert (target != -100).all(), "target should not contain -100 anymore"
+"""
+
+
+class DataCollatorReasonLangModeling:
+    def __init__(self, pad_token_id: int):
+        self.pad_token_id = pad_token_id
+
+    @jaxtyped(typechecker=typechecker)
+    def collate_batch(self, batch: list[DatasetOutput]) -> BatchDataPoint:
+        max_length = max(len(item) for item, _ in batch)
+        padded_batch = []
+
+        for item, _ in batch:
+            num_padding = max_length - len(item)
+
+            padded_sequence = item + [self.pad_token_id] * num_padding
+            padded_batch.append(padded_sequence)
+
+        padded_batch_tensor = torch.tensor(padded_batch)
+
+        B, T = padded_batch_tensor.shape
+
+        target = -100 * torch.ones(
+            (B, T - 1), dtype=torch.long, device=padded_batch_tensor.device
+        )
+
+        # note: the following could probably be vectorizer, but at dataloading time
+        # we don't care yet
+        for b, (_, d_data) in enumerate(batch):
+            cutoff = d_data["cutoff"]
+            reason_net_token_num = d_data["reason_net_token_num"]
+
+            assert cutoff > 0, "cutoff should be greater than 0"
+
+            # everything before the equal sign is treated normally
+            # aka target is the next token
+            target[b, 0:cutoff] = padded_batch_tensor[b, 1 : cutoff + 1]
+
+            last_reason_token_pos = cutoff + reason_net_token_num
+            first_reason_token_pos = cutoff + 1
+            # target for the equal token is the token after the last reason token
+            target[b, cutoff] = padded_batch_tensor[b, last_reason_token_pos + 1]
+
+            # target for the reason token is the pad token, because we want to ignore it
+            target[
+                b, first_reason_token_pos : last_reason_token_pos + 1
+            ] = self.pad_token_id
+
+            # target for everything after the reason token is treated normally
+            # aka target is the next token
+            rest_roken = last_reason_token_pos + 1
+            target[b, rest_roken:] = padded_batch_tensor[b, rest_roken + 1 :]
+
+        assert (target != -100).all(), "target should not contain -100 anymore"
+
+        dict_data = {"target": target}
+
+        return padded_batch_tensor, dict_data
 
 
 class MathDataModule(L.LightningDataModule):
@@ -178,10 +267,21 @@ class MathDataModule(L.LightningDataModule):
         self.tokenizer = MathTokenizer()
 
     def prepare_data(self) -> None:
-        self.dataset = MathDataset(
-            self.conf.dataset_path, self.tokenizer, self.conf.dataset_config
-        )
-        self.data_collator = DataCollatorLangModeling(self.tokenizer.pad_token_id)
+        self.data_collator: typing.Any
+
+        if not self.conf.reason_net_data:
+            self.dataset = MathDataset(self.conf.dataset_path, self.tokenizer)
+            self.data_collator = DataCollatorLangModeling(self.tokenizer.pad_token_id)
+
+        else:
+            self.dataset = MathDatasetReason(
+                self.conf.dataset_path,
+                self.tokenizer,
+                self.conf.reason_net_token_num,
+            )
+            self.data_collator = DataCollatorReasonLangModeling(
+                self.tokenizer.pad_token_id
+            )
 
     def setup(self, stage: str) -> None:
         # Assign train/val datasets for use in dataloaders

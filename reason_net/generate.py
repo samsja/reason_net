@@ -13,7 +13,7 @@ from jaxtyping import Int
 
 from reason_net.data import MathTokenizer
 from reason_net.llama import Index, LLaMA, LLaMaConfig
-from reason_net.module import NormalModule, ModuleConfig
+from reason_net.module import LLaMaModule, ModuleConfig
 
 app = App()
 
@@ -122,7 +122,7 @@ def main(
     llama_conf = get_config(Path(f"{model_conf}.yaml"))
 
     tokenizer = MathTokenizer()
-    module = NormalModule(ModuleConfig(model=llama_conf, lr=0.0), tokenizer)
+    module = LLaMaModule(ModuleConfig(model=llama_conf, lr=0.0), tokenizer)
 
     checkpoint = torch.load(checkpoint_path, map_location=fabric.device)
     module.load_state_dict(checkpoint["state_dict"])

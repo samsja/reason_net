@@ -3,7 +3,8 @@ from typing import Literal
 from typing_extensions import Self
 import hydra
 from omegaconf import DictConfig, OmegaConf
-from pydantic import BaseModel, model_validator
+from reason_net.pydantic_conf import Config
+from pydantic import model_validator
 from lightning import Trainer
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.callbacks import ModelCheckpoint, Callback
@@ -12,10 +13,10 @@ import torch
 import wandb
 
 from reason_net.data import MathDataModule, MathDataConfig
-from reason_net.module import NAME_TO_MODULE, NormalModule, ModuleConfig
+from reason_net.module import LLaMaModule, ModuleConfig
 
 
-class PlTrainerConfig(BaseModel):
+class PlTrainerConfig(Config):
     precision: Literal["bf16-mixed", "bf16-true", "32-true"]
     max_epochs: int
     log_every_n_steps: int
@@ -23,35 +24,37 @@ class PlTrainerConfig(BaseModel):
     val_check_interval: float | int
 
 
-class WandbConfig(BaseModel):
+class WandbConfig(Config):
     enabled: bool
     project_name: str
     name: str | None = None
 
 
-class TrainerConfig(BaseModel):
+class TrainerConfig(Config):
     lightning: PlTrainerConfig
     save_dir: Path
     checkpoint_path: Path | None
 
 
-class RunConfig(BaseModel):
+class RunConfig(Config):
     data: MathDataConfig
     module: ModuleConfig
-    module_name: Literal["normal", "reason"]
+    reason_mode: bool
     trainer: TrainerConfig
     wandb: WandbConfig
 
     @model_validator(mode="after")
-    def reason_net_data(self) -> Self:
-        if self.module_name == "reason":
-            self.data.dataset_config.reason_net_data = True
+    def reason_mode_setup(self) -> Self:
+        if self.reason_mode:
+            self.data.reason_net_data = True
+        else:
+            self.data.reason_net_data = False
         return self
 
 
-def run(conf: RunConfig) -> tuple[NormalModule, MathDataModule]:
+def run(conf: RunConfig) -> tuple[LLaMaModule, MathDataModule]:
     data = MathDataModule(conf.data)
-    module = NAME_TO_MODULE[conf.module_name](conf.module, data.tokenizer)
+    module = LLaMaModule(conf.module, data.tokenizer)
 
     if not (conf.wandb.enabled):
         run = wandb.init(mode="disabled")  # type: ignore

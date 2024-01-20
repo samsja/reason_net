@@ -7,13 +7,13 @@ data:
   dataset_path: datasets/data-100m.txt
   seed: 42
 
-  dataset_config:
-    reason_net_token_num: 20
+  reason_net_token_num: 20
+  reason_net_data: false
 
 module:
   lr: 1e-3
 
-module_name: "normal"
+reason_mode: false
 
 trainer:
 

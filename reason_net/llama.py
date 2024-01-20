@@ -9,7 +9,8 @@ Based on the nanoGPT implementation: https://github.com/karpathy/nanoGPT.
 import math
 from typing import Any, TypeAlias
 
-from pydantic import BaseModel, model_validator
+from reason_net.pydantic_conf import Config
+from pydantic import model_validator
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
@@ -34,7 +35,7 @@ def find_multiple(n: int, k: int) -> int:
     return n + k - (n % k)
 
 
-class LLaMaConfig(BaseModel):
+class LLaMaConfig(Config):
     block_size: int
     vocab_size: int | None = None
     padded_vocab_size: int = 64
