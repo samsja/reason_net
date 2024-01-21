@@ -43,13 +43,10 @@ class LLaMaModule(LightningModule):
     def _loss_step(
         self, step_name: str, batch: BatchDataPoint, _batch_idx, accuracy: bool
     ) -> Float[Tensor, ""]:
-        data, dict_data = batch
+        data, target = batch
         input = data[:, :-1]
 
-        if "target" in dict_data.keys():
-            target = dict_data["target"]
-        else:
-            target = data[:, 1:]
+        assert input.shape == target.shape
 
         logits = self.forward(input)
 

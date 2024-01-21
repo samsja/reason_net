@@ -1,7 +1,7 @@
 from __future__ import annotations
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, ClassVar, TypeAlias, TypeVar
+from typing import ClassVar, TypeAlias, TypeVar
 import typing
 
 from reason_net.pydantic_conf import Config
@@ -111,7 +111,12 @@ class MathDataset(Dataset):
         data_left = self.tokenizer.encode(left)
         data_right = self.tokenizer.encode(right)
 
-        data = data_left + data_right + [self.tokenizer.eos_token_id]
+        data = (
+            data_left
+            + data_right
+            + [self.tokenizer.eos_token_id, self.tokenizer.pad_token_id]
+        )
+        # adding pad token here so that the eos is taken into account in the input
         return data, {"cutoff": len(data_left)}
 
 
@@ -142,7 +147,7 @@ class MathDatasetReason(MathDataset):
         }
 
 
-BatchDataPoint: TypeAlias = tuple[Int[Tensor, "b seq"], dict[str, Any]]
+BatchDataPoint: TypeAlias = tuple[Int[Tensor, "b seq"], Int[Tensor, "b seq_minus_one"]]
 
 
 class DataCollatorLangModeling:
@@ -166,39 +171,15 @@ class DataCollatorLangModeling:
             for key in dict_item.keys():
                 dict_data[key].append(dict_item[key])
 
-        return torch.tensor(padded_batch), dict_data
+        padded_batch_tensor = torch.tensor(padded_batch)
 
+        target = padded_batch_tensor[:, 1:].clone()
 
-"""
-        target = -100 * torch.ones((B, T - 1), dtype=torch.long, device=data.device)
+        for b, (_, d_data) in enumerate(batch):
+            cutoff = d_data["cutoff"]
+            target[b, 0:cutoff] = self.pad_token_id
 
-        for b in range(B):
-            cutoff = dict_data["cutoff"][b]
-            reason_net_token_num = dict_data["reason_net_token_num"][b]
-
-            assert cutoff > 0, "cutoff should be greater than 0"
-
-            # everything before the equal sign is treated normally
-            # aka target is the next token
-            target[b, 0:cutoff] = data[b, 1 : cutoff + 1]
-
-            last_reason_token_pos = cutoff + reason_net_token_num
-            first_reason_token_pos = cutoff + 1
-            # target for the equal token is the token after the last reason token
-            target[b, cutoff] = data[b, last_reason_token_pos + 1]
-
-            # target for the reason token is the pad token, because we want to ignore it
-            target[
-                b, first_reason_token_pos : last_reason_token_pos + 1
-            ] = self.tokenizer.pad_token_id
-
-            # target for everything after the reason token is treated normally
-            # aka target is the next token
-            rest_roken = last_reason_token_pos + 1
-            target[b, rest_roken:] = data[b, rest_roken + 1 :]
-
-        assert (target != -100).all(), "target should not contain -100 anymore"
-"""
+        return padded_batch_tensor, target
 
 
 class DataCollatorReasonLangModeling:
@@ -232,9 +213,8 @@ class DataCollatorReasonLangModeling:
 
             assert cutoff > 0, "cutoff should be greater than 0"
 
-            # everything before the equal sign is treated normally
-            # aka target is the next token
-            target[b, 0:cutoff] = padded_batch_tensor[b, 1 : cutoff + 1]
+            # everything before the equal sign is ignored
+            target[b, 0:cutoff] = self.pad_token_id
 
             last_reason_token_pos = cutoff + reason_net_token_num
             first_reason_token_pos = cutoff + 1
@@ -253,9 +233,7 @@ class DataCollatorReasonLangModeling:
 
         assert (target != -100).all(), "target should not contain -100 anymore"
 
-        dict_data = {"target": target}
-
-        return padded_batch_tensor, dict_data
+        return padded_batch_tensor, target
 
 
 class MathDataModule(L.LightningDataModule):
