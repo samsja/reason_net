@@ -22,25 +22,34 @@ struct Args {
 
     #[arg(long)]
     save_file_path: String,
+
+    #[arg(long, default_value = "+-*/%")]
+    operators: String,
 }
 
-fn generate_datapoint(min: u32, max: u32, rng: &mut StdRng) -> String {
+fn generate_operator(a: i64, b: i64, operator: char) -> String {
+    match operator {
+        '+' => format!("{a}+{b}={}", a + b),
+        '-' => format!("{a}-{b}={}", a - b),
+        '*' => format!("{a}*{b}={}", a * b),
+        '/' => format!("{a}/{b}={}", a / b),
+        '%' => format!("{a}%{b}={}", a % b),
+        _ => panic!("Invalid operand"),
+    }
+}
+
+fn generate_datapoint(min: u32, max: u32, rng: &mut StdRng, operators: String) -> String {
     let min_val = 10i64.pow(min);
     let max_val = 10i64.pow(max);
 
     let a: i64 = rng.gen_range(min_val..max_val);
     let b: i64 = rng.gen_range(min_val..max_val);
 
-    let operand = rng.gen_range(0..5);
+    let operand = rng.gen_range(0..operators.len());
 
-    let exo = match operand {
-        0 => format!("{a}+{b}={}", a + b),
-        1 => format!("{a}-{b}={}", a - b),
-        2 => format!("{a}*{b}={}", a * b),
-        3 => format!("{a}/{b}={}", a / b),
-        4 => format!("{a}%{b}={}", a % b),
-        _ => panic!("Invalid operand"),
-    };
+    let operator = operators.chars().nth(operand).unwrap();
+
+    let exo = generate_operator(a, b, operator);
 
     exo
 }
@@ -53,7 +62,8 @@ fn generate_all(conf: Args) {
     let progress_bar = ProgressBar::new(conf.size as u64);
 
     while unique_exos.len() < conf.size as usize {
-        let datapoint: String = generate_datapoint(conf.min, conf.max, &mut rng);
+        let datapoint: String =
+            generate_datapoint(conf.min, conf.max, &mut rng, conf.operators.clone());
         let added = unique_exos.insert(datapoint);
         if added {
             progress_bar.inc(1);
