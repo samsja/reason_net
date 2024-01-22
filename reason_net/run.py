@@ -85,6 +85,7 @@ def run(conf: RunConfig) -> tuple[LLaMaModule, MathDataModule]:
     )
     trainer.fit(module, data, ckpt_path=ckpt_path)
 
+    trainer.test(module, datamodule=data)
     return module, data
 
 

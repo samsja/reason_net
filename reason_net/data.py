@@ -262,11 +262,6 @@ class MathDataModule(L.LightningDataModule):
             )
 
     def setup(self, stage: str) -> None:
-        # Assign train/val datasets for use in dataloaders
-
-        if stage != "fit":
-            raise NotImplementedError(f"DataModule stage {stage} not implemented")
-
         train_size = int(self.train_prop * len(self.dataset))
         val_size = len(self.dataset) - train_size
 
@@ -291,3 +286,6 @@ class MathDataModule(L.LightningDataModule):
             num_workers=self.conf.num_workers,
             collate_fn=self.data_collator.collate_batch,
         )
+
+    def test_dataloader(self) -> DataLoader:
+        return self.val_dataloader()

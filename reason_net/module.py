@@ -87,3 +87,6 @@ class LLaMaModule(LightningModule):
 
     def validation_step(self, batch: BatchDataPoint, _batch_idx) -> Float[Tensor, ""]:
         return self._loss_step("val", batch, _batch_idx, accuracy=True)
+
+    def test_step(self, batch: BatchDataPoint, _batch_idx) -> Float[Tensor, ""]:
+        return self._loss_step("test", batch, _batch_idx, accuracy=True)
