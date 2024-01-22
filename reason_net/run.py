@@ -7,7 +7,8 @@ from reason_net.pydantic_conf import Config
 from pydantic import model_validator
 from lightning import Trainer
 from lightning.pytorch.loggers import WandbLogger
-from lightning.pytorch.callbacks import ModelCheckpoint, Callback
+from lightning.pytorch.callbacks import ModelCheckpoint, Callback, LearningRateMonitor
+
 
 import torch
 import wandb
@@ -72,7 +73,9 @@ def run(conf: RunConfig) -> tuple[LLaMaModule, MathDataModule]:
         save_last=True,
     )
 
-    callbacks: list[Callback] = [checkpoint_callback]
+    lr_monitor_callback = LearningRateMonitor(logging_interval="step")
+
+    callbacks: list[Callback] = [checkpoint_callback, lr_monitor_callback]
 
     trainer = Trainer(
         **conf.trainer.lightning.model_dump(), logger=wandb_logger, callbacks=callbacks

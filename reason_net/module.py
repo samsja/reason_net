@@ -6,6 +6,7 @@ from torch import Tensor
 import torch
 import torch.nn.functional as F
 from lightning import LightningModule
+from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from beartype import beartype as typechecker
 from reason_net.pydantic_conf import Config
 
@@ -22,6 +23,7 @@ Batch: TypeAlias = tuple[Int[Tensor, "b seq_input"], Int[Tensor, "b seq_output"]
 class ModuleConfig(Config):
     model: LLaMaConfig
     lr: float
+    warmup_steps: int = 1000
 
 
 class LLaMaModule(LightningModule):
@@ -36,8 +38,19 @@ class LLaMaModule(LightningModule):
     def forward(self, x: Int[Tensor, "b seq"]) -> Float[Tensor, "b seq vocab_size"]:
         return self.model(x)
 
-    def configure_optimizers(self) -> torch.optim.Optimizer:
-        return torch.optim.AdamW(self.parameters(), lr=self.conf.lr)
+    def configure_optimizers(self) -> OptimizerLRScheduler:
+        optimizer = torch.optim.AdamW(self.parameters(), lr=self.conf.lr)
+
+        lr_scheduler = torch.optim.lr_scheduler.LinearLR(
+            optimizer,
+            total_iters=self.conf.warmup_steps,
+            start_factor=1e-6,
+        )
+
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {"scheduler": lr_scheduler, "interval": "step"},
+        }
 
     @jaxtyped(typechecker=typechecker)
     def _loss_step(
