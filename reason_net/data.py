@@ -64,6 +64,10 @@ class MathTokenizer:
         return self.vocab[self.reason_token]
 
     @property
+    def equal_token_id(self) -> int:
+        return self.vocab[self.equal_token]
+
+    @property
     def vocab_size(self) -> int:
         return len(self.vocab)
 
@@ -108,13 +112,14 @@ class MathDataset(Dataset):
 
         [left, right] = data_point.split("=")
 
-        left = left + "="  # keep equal sign
+        left = left
 
         data_left = self.tokenizer.encode(left)
         data_right = self.tokenizer.encode(right)
 
         data = (
             data_left
+            + [self.tokenizer.equal_token_id]  # add back the equal token
             + data_right
             + [self.tokenizer.eos_token_id, self.tokenizer.pad_token_id]
         )
