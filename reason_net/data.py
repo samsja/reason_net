@@ -108,6 +108,8 @@ class MathDataset(Dataset):
 
         [left, right] = data_point.split("=")
 
+        left = left + "="  # keep equal sign
+
         data_left = self.tokenizer.encode(left)
         data_right = self.tokenizer.encode(right)
 
