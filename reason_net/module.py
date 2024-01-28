@@ -23,7 +23,7 @@ Batch: TypeAlias = tuple[Int[Tensor, "b seq_input"], Int[Tensor, "b seq_output"]
 class ModuleConfig(Config):
     model: LLaMaConfig
     lr: float
-    warmup_steps: int = 1000
+    warmup_steps: int = 400
 
 
 class LLaMaModule(LightningModule):
@@ -49,7 +49,11 @@ class LLaMaModule(LightningModule):
 
         return {
             "optimizer": optimizer,
-            "lr_scheduler": {"scheduler": lr_scheduler, "interval": "step"},
+            "lr_scheduler": {
+                "scheduler": lr_scheduler,
+                "interval": "step",
+                "name": "learning_rate",
+            },
         }
 
     @jaxtyped(typechecker=typechecker)
