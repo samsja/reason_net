@@ -144,6 +144,7 @@ class MathDatasetReason(MathDataset):
 
         data = (
             data_left
+            + [self.tokenizer.equal_token_id]  # add back the equal token
             + [self.tokenizer.reason_token_id] * self.reason_net_token_num
             + data_right
             + [self.tokenizer.eos_token_id]
@@ -220,22 +221,12 @@ class DataCollatorReasonLangModeling:
 
             assert cutoff > 0, "cutoff should be greater than 0"
 
-            # everything before the equal sign is ignored
-            target[b, 0:cutoff] = self.pad_token_id
-
-            last_reason_token_pos = cutoff + reason_net_token_num
-            first_reason_token_pos = cutoff + 1
-            # target for the equal token is the token after the last reason token
-            target[b, cutoff] = padded_batch_tensor[b, last_reason_token_pos + 1]
-
-            # target for the reason token is the pad token, because we want to ignore it
-            target[
-                b, first_reason_token_pos : last_reason_token_pos + 1
-            ] = self.pad_token_id
+            # everything before the end of the reason token is ignore by loss
+            target[b, 0 : cutoff + reason_net_token_num + 1] = self.pad_token_id
 
             # target for everything after the reason token is treated normally
             # aka target is the next token
-            rest_roken = last_reason_token_pos + 1
+            rest_roken = cutoff + reason_net_token_num + 1
             target[b, rest_roken:] = padded_batch_tensor[b, rest_roken + 1 :]
 
         assert (target != -100).all(), "target should not contain -100 anymore"
