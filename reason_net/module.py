@@ -55,7 +55,7 @@ class LLaMaModule(LightningModule):
     @jaxtyped(typechecker=typechecker)
     def _loss_step(
         self, step_name: str, batch: BatchDataPoint, _batch_idx, accuracy: bool
-    ) -> Float[Tensor, ""]:
+    ) -> tuple[Float[Tensor, ""], Float[Tensor, ""]]:
         data, target = batch
         input = data[:, :-1]
 
@@ -79,14 +79,16 @@ class LLaMaModule(LightningModule):
                 .mean()
             )
             self.log(f"{step_name}_token_accuracy", token_acc)
+        else:
+            token_acc = torch.tensor(0.0)
 
-        return loss
+        return loss, token_acc
 
     def training_step(self, batch: BatchDataPoint, _batch_idx) -> Float[Tensor, ""]:
-        return self._loss_step("train", batch, _batch_idx, accuracy=False)
+        return self._loss_step("train", batch, _batch_idx, accuracy=False)[0]
 
     def validation_step(self, batch: BatchDataPoint, _batch_idx) -> Float[Tensor, ""]:
-        return self._loss_step("val", batch, _batch_idx, accuracy=True)
+        return self._loss_step("val", batch, _batch_idx, accuracy=True)[0]
 
     def test_step(self, batch: BatchDataPoint, _batch_idx) -> Float[Tensor, ""]:
-        return self._loss_step("test", batch, _batch_idx, accuracy=True)
+        return self._loss_step("test", batch, _batch_idx, accuracy=True)[0]
