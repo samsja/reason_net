@@ -1,6 +1,7 @@
 use clap::Parser;
 use indicatif::ProgressBar;
 use rand::rngs::StdRng;
+use rand::seq::SliceRandom;
 use rand::{Rng, SeedableRng};
 use rustc_hash::FxHashSet;
 
@@ -72,14 +73,45 @@ fn generate_all(conf: Args) {
 
     progress_bar.finish_with_message("done");
 
-    std::fs::write(
-        conf.save_file_path,
-        unique_exos.into_iter().collect::<Vec<String>>().join("\n"),
-    )
-    .unwrap();
+    let operators: Vec<char> = conf.operators.chars().collect();
+
+    let max = 999;
+
+    let range1 = 9..max;
+    let range2 = 9..max;
+
+    let mut digit_data: Vec<String> = Vec::with_capacity(operators.len() * max * max);
+
+    for operator in operators {
+        for i in range1.clone() {
+            for j in range2.clone() {
+                digit_data.push(generate_operator(i as i64, j as i64, operator))
+            }
+        }
+    }
+
+    let unique_exos: Vec<String> = unique_exos.into_iter().collect();
+
+    let mut exo_to_save = unique_exos
+        .into_iter()
+        .chain(digit_data.into_iter())
+        .collect::<Vec<String>>();
+
+    exo_to_save.shuffle(&mut rng);
+
+    std::fs::write(conf.save_file_path, exo_to_save.join("\n")).unwrap();
 }
 
 fn main() {
     let args = Args::parse();
+
+    if args.min > args.max {
+        panic!("min should be less than max");
+    }
+
+    if args.min < 3 {
+        panic!("min should be greater than 3");
+    }
+
     generate_all(args);
 }

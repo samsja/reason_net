@@ -5,8 +5,8 @@ generate data (for data-100m.txt)
 
 ```bash
 cd data_gen
-cargo run --release -- --min 0 --max 6 --size 100000000 --seed 32 --save-file-path data-100m.txt
-mv data-100m.txt ../datasets/.
+cargo run --release -- --min 3 --max 5 --size 10000000 --seed 32 --operators "+" --save-file-path data-100m-max4-add.txt
+mv data-100m-max4-add.txt ../datasets/.
 ```
 
 for data-50m-add.txt
