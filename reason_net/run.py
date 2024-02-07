@@ -35,6 +35,7 @@ class TrainerConfig(Config):
     lightning: PlTrainerConfig
     save_dir: Path
     checkpoint_path: Path | None
+    gradient_clip_val: float | None
 
 
 class RunConfig(Config):

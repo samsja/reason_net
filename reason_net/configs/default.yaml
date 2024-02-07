@@ -26,6 +26,7 @@ trainer:
     
   save_dir: "lightning_logs"
   checkpoint_path: null
+  gradient_clip_val: 1.0
 
 wandb:
   enabled: true
