@@ -222,11 +222,13 @@ class DataCollatorReasonLangModeling:
             assert cutoff > 0, "cutoff should be greater than 0"
 
             # everything before the end of the reason token is ignore by loss
-            target[b, 0 : cutoff + reason_net_token_num + 1] = self.pad_token_id
+            # until the last reason token (not included)
+            target[b, 0 : cutoff + reason_net_token_num] = self.pad_token_id
 
-            # target for everything after the reason token is treated normally
+            # target for everything after (including the last reason token)
+            # the reason token is treated normally
             # aka target is the next token
-            rest_roken = cutoff + reason_net_token_num + 1
+            rest_roken = cutoff + reason_net_token_num
             target[b, rest_roken:] = padded_batch_tensor[b, rest_roken + 1 :]
 
         assert (target != -100).all(), "target should not contain -100 anymore"
