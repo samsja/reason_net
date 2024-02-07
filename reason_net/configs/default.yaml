@@ -5,7 +5,6 @@ data:
   batch_size: 12288 
   num_workers: 4
   dataset_path: datasets/data-100m.txt
-  seed: 42
 
   reason_net_token_num: 20
   reason_net_data: false
@@ -17,18 +16,11 @@ reason_mode: false
 
 trainer:
 
-  lightning:
-    precision: "bf16-mixed"
-    max_epochs: 1
-    log_every_n_steps: 1
+  pl:
     devices: 1
-    val_check_interval: 0.1
     
   save_dir: "lightning_logs"
-  checkpoint_path: null
-  gradient_clip_val: 1.0
 
 wandb:
   enabled: true
   project_name: "reason_net"
-  name: null

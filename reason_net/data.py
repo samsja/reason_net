@@ -73,7 +73,7 @@ class MathTokenizer:
 
 
 class MathDataConfig(Config):
-    seed: int
+    seed: int = 42
     batch_size: int
     num_workers: int
     dataset_path: Path

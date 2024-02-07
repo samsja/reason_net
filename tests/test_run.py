@@ -1,5 +1,5 @@
 from pathlib import Path
-from omegaconf import DictConfig
+from omegaconf import DictConfig, open_dict
 import pytest
 import torch
 
@@ -20,11 +20,12 @@ def raw_config() -> DictConfig:
 
 
 def _init_config(cfg: DictConfig, tmp_path: Path) -> DictConfig:
-    cfg.trainer.save_dir = tmp_path
-    cfg.trainer.lightning.max_epochs = 2
-    cfg.data.num_workers = 0
-    cfg.wandb.enabled = False
-    cfg.data.dataset_path = Path("tests/data-test.txt")
+    with open_dict(cfg):
+        cfg.trainer.save_dir = tmp_path
+        cfg.trainer.pl.max_epochs = 2
+        cfg.data.num_workers = 0
+        cfg.wandb.enabled = False
+        cfg.data.dataset_path = Path("tests/data-test.txt")
     return cfg
 
 

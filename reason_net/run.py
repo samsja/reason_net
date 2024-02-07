@@ -18,11 +18,11 @@ from reason_net.module import LLaMaModule, ModuleConfig
 
 
 class PlTrainerConfig(Config):
-    precision: Literal["bf16-mixed", "bf16-true", "32-true"]
-    max_epochs: int
-    log_every_n_steps: int
+    precision: Literal["bf16-mixed", "bf16-true", "32-true"] = "bf16-mixed"
+    max_epochs: int = 1
+    log_every_n_steps: int = 1
     devices: int
-    val_check_interval: float | int
+    val_check_interval: float | int = 0.1
 
 
 class WandbConfig(Config):
@@ -32,10 +32,10 @@ class WandbConfig(Config):
 
 
 class TrainerConfig(Config):
-    lightning: PlTrainerConfig
+    pl: PlTrainerConfig
     save_dir: Path
-    checkpoint_path: Path | None
-    gradient_clip_val: float | None
+    checkpoint_path: Path | None = None
+    gradient_clip_val: float | None = 1.0
 
 
 class RunConfig(Config):
@@ -79,7 +79,7 @@ def run(conf: RunConfig) -> tuple[LLaMaModule, MathDataModule]:
     callbacks: list[Callback] = [checkpoint_callback, lr_monitor_callback]
 
     trainer = Trainer(
-        **conf.trainer.lightning.model_dump(), logger=wandb_logger, callbacks=callbacks
+        **conf.trainer.pl.model_dump(), logger=wandb_logger, callbacks=callbacks
     )
     ckpt_path = (
         str(conf.trainer.checkpoint_path) if conf.trainer.checkpoint_path else None
