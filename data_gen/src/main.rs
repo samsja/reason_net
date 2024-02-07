@@ -26,6 +26,9 @@ struct Args {
 
     #[arg(long, default_value = "+-*/%")]
     operators: String,
+
+    #[arg(long, default_value = "n")]
+    short: String,
 }
 
 fn generate_operator(a: i64, b: i64, operator: char) -> String {
@@ -73,29 +76,36 @@ fn generate_all(conf: Args) {
 
     progress_bar.finish_with_message("done");
 
-    let operators: Vec<char> = conf.operators.chars().collect();
+    let unique_exos: Vec<String> = unique_exos.into_iter().collect();
+    let mut exo_to_save: Vec<String>;
 
-    let max = 999;
+    if conf.short == "y" {
+        let operators: Vec<char> = conf.operators.chars().collect();
 
-    let range1 = 9..max;
-    let range2 = 9..max;
+        let max = 999;
 
-    let mut digit_data: Vec<String> = Vec::with_capacity(operators.len() * max * max);
+        let range1 = 9..max;
+        let range2 = 9..max;
 
-    for operator in operators {
-        for i in range1.clone() {
-            for j in range2.clone() {
-                digit_data.push(generate_operator(i as i64, j as i64, operator))
+        let mut digit_data: Vec<String> = Vec::with_capacity(operators.len() * max * max);
+
+        for operator in operators {
+            for i in range1.clone() {
+                for j in range2.clone() {
+                    digit_data.push(generate_operator(i as i64, j as i64, operator))
+                }
             }
         }
+
+        exo_to_save = unique_exos
+            .into_iter()
+            .chain(digit_data.into_iter())
+            .collect::<Vec<String>>();
+    } else if conf.short == "n" {
+        exo_to_save = unique_exos;
+    } else {
+        panic!("Invalid short option");
     }
-
-    let unique_exos: Vec<String> = unique_exos.into_iter().collect();
-
-    let mut exo_to_save = unique_exos
-        .into_iter()
-        .chain(digit_data.into_iter())
-        .collect::<Vec<String>>();
 
     exo_to_save.shuffle(&mut rng);
 
