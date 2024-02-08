@@ -3,6 +3,7 @@ from typing import Literal
 from typing_extensions import Self
 import hydra
 from omegaconf import DictConfig, OmegaConf
+from reason_net.calllbacks.norm_monitor import NormMonitorConfig
 from reason_net.pydantic_conf import Config
 from pydantic import model_validator
 from lightning import Trainer
@@ -31,11 +32,16 @@ class WandbConfig(Config):
     name: str | None = None
 
 
+class CallbackConfig(Config):
+    norm_monitor: NormMonitorConfig | None = None
+
+
 class TrainerConfig(Config):
     pl: PlTrainerConfig
     save_dir: Path
     checkpoint_path: Path | None = None
     gradient_clip_val: float | None = 1.0
+    callbacks: CallbackConfig = CallbackConfig()
 
 
 class RunConfig(Config):
@@ -77,6 +83,10 @@ def run(conf: RunConfig) -> tuple[LLaMaModule, MathDataModule]:
     lr_monitor_callback = LearningRateMonitor(logging_interval="step")
 
     callbacks: list[Callback] = [checkpoint_callback, lr_monitor_callback]
+
+    for _, callback_conf in conf.trainer.callbacks:
+        if callback_conf is not None:
+            callbacks.append(callback_conf._target_(callback_conf))
 
     trainer = Trainer(
         **conf.trainer.pl.model_dump(), logger=wandb_logger, callbacks=callbacks

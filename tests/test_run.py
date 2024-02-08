@@ -26,6 +26,11 @@ def _init_config(cfg: DictConfig, tmp_path: Path) -> DictConfig:
         cfg.data.num_workers = 0
         cfg.wandb.enabled = False
         cfg.data.dataset_path = Path("tests/data-test.txt")
+
+        cfg.trainer.callbacks = {
+            "norm_monitor": {"log_every_n_steps": 1},
+        }
+
     return cfg
 
 
