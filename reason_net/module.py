@@ -4,10 +4,10 @@ from einops import rearrange
 from jaxtyping import Int, Float, jaxtyped
 from torch import Tensor
 import torch
+import torch.nn.functional as F
 from lightning import LightningModule
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from beartype import beartype as typechecker
-from reason_net.loss import MaxZLoss
 from reason_net.pydantic_conf import Config
 
 from reason_net.data import BatchDataPoint, MathTokenizer
@@ -24,7 +24,6 @@ class ModuleConfig(Config):
     model: LLaMaConfig
     lr: float
     warmup_steps: int = 400
-    z_loss_w: float = 2e-4
 
 
 class LLaMaModule(LightningModule):
@@ -34,10 +33,6 @@ class LLaMaModule(LightningModule):
         conf.model.vocab_size = tokenizer.vocab_size
         self.model = LLaMA(conf.model)
         self.conf = conf
-
-        self.loss = MaxZLoss(
-            ignore_index=tokenizer.pad_token_id, z_loss_w=conf.z_loss_w
-        )
 
     @jaxtyped(typechecker=typechecker)
     def forward(self, x: Int[Tensor, "b seq"]) -> Float[Tensor, "b seq vocab_size"]:
@@ -75,12 +70,10 @@ class LLaMaModule(LightningModule):
         flatten_logits = rearrange(logits, "b seq vocab -> (b seq) vocab")
         flatten_target = rearrange(target, "b seq -> (b seq)")
 
-        loss, max_z_loss = self.loss(flatten_logits, flatten_target)
-
+        loss = F.cross_entropy(
+            flatten_logits, flatten_target, ignore_index=self.tokenizer.pad_token_id
+        )
         self.log(f"{step_name}_loss", loss)
-        self.log(f"{step_name}_max_z_loss", max_z_loss)
-
-        loss = loss + max_z_loss
 
         if accuracy:
             ignore_mask = target != self.tokenizer.pad_token_id
