@@ -35,19 +35,24 @@ class NormMonitor(Callback):
     ) -> None:
         """Register the hooks to monitor the activations."""
         if trainer.global_step % self.config.log_every_n_steps == 0:
+
+            def _hook(
+                name: str,
+                _mod: Any,
+                _inp: Any,
+                outp: torch.Tensor,
+            ) -> None:
+                norm = outp.norm(p=2)
+                pl_module.log(f"norm/{name}", norm)
+
             for i, layer in enumerate(pl_module.model.transformer.h):
-
-                def _hook(
-                    name: str,
-                    _mod: Any,
-                    _inp: Any,
-                    outp: torch.Tensor,
-                ) -> None:
-                    norm = outp.norm(p=2)
-                    pl_module.log(f"norm/{name}", norm)
-
                 _h = layer.register_forward_hook(partial(_hook, f"layer_{i}"))
                 self.handles.append(_h)
+
+            _h = pl_module.model.lm_head.register_forward_hook(
+                partial(_hook, "lm_head")
+            )
+            self.handles.append(_h)
 
     @no_type_check
     @rank_zero_only
