@@ -24,6 +24,7 @@ class PlTrainerConfig(Config):
     log_every_n_steps: int = 1
     devices: int
     val_check_interval: float | int = 0.1
+    gradient_clip_val: float | None = 1.0
 
 
 class WandbConfig(Config):
@@ -40,7 +41,6 @@ class TrainerConfig(Config):
     pl: PlTrainerConfig
     save_dir: Path
     checkpoint_path: Path | None = None
-    gradient_clip_val: float | None = 1.0
     callbacks: CallbackConfig = CallbackConfig()
 
 
