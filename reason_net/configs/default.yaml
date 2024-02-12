@@ -1,25 +1,17 @@
-defaults:
-  - module/model: 14M
-
-data:
-  batch_size: 12288 
-  num_workers: 4
-  dataset_path: datasets/data-100m.txt
-
-  reason_net_token_num: 20
-  reason_net_data: false
-
-module:
-  lr: 1e-3
-
 reason_mode: false
 
 trainer:
 
   pl:
     devices: 1
-    
+    val_check_interval: 0.5
+    max_epochs: 25
+
   save_dir: "lightning_logs"
+
+  callbacks:
+    norm_monitor:
+      log_every_n_steps: 50
 
 wandb:
   enabled: true
