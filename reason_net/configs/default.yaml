@@ -7,7 +7,7 @@ data:
   dataset_path: datasets/data-100m.txt
 
 module:
-  lr: 1e-3
+  lr: 5e-3
 
 reason_mode: false
 
