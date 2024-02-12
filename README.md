@@ -14,23 +14,32 @@ mv data-100m-all.txt ../datasets/.
 
 ```
 
-for data-50m-add.txt
-
-
-```bash
-cargo run --release -- --min 0 --max 4 --size 5000000 --seed 32 --operators "+" --save-file-path data-50m-add.txt 
-```
 
 run the training
 
 
+normal 
+
 ```bash
-python reason_net/run.py --config-path configs --config-name default.yaml 
+python reason_net/run.py --config-path configs --config-name all-14m.yaml
+```
+
+
+reason middle
+
+```bash
+python reason_net/run.py --config-path configs --config-name all-14m.yaml reason_mode=true 
+```
+
+
+reason left 
+```bash
+python reason_net/run.py --config-path configs --config-name all-14m.yaml reason_mode=true +data.reason.reason_token_pos="left" 
 ```
 
 
 With small model for test
 
 ```bash
-python reason_net/run.py --config-path configs --config-name default.yaml module/model=910K
+python reason_net/run.py --config-path configs --config-name all-14m.yaml module/model=910K
 ```
