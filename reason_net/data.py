@@ -78,7 +78,7 @@ class MathDataConfig(Config):
     num_workers: int
     dataset_path: Path
     reason_net_data: bool = False
-    reason_net_token_num: int
+    reason_net_token_num: int = 20
 
 
 seq = TypeVar("seq")
