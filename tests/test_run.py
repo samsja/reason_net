@@ -34,12 +34,18 @@ def _init_config(cfg: DictConfig, tmp_path: Path) -> DictConfig:
     return cfg
 
 
-@pytest.mark.parametrize("reason_mode", [False, True])
-def test_run(raw_config: DictConfig, tmp_path: Path, reason_mode: bool):
+@pytest.mark.parametrize(
+    "reason_mode", [(False, "middle"), (True, "middle"), (True, "left")]
+)
+def test_run(raw_config: DictConfig, tmp_path: Path, reason_mode: tuple[bool, str]):
     raw_config = _init_config(raw_config, tmp_path)
 
     config = omegaconf_to_pydantic(raw_config)
-    config.reason_mode = reason_mode
+    config.reason_mode = reason_mode[0]
+
+    if reason_mode[0]:
+        config.data.reason.reason_token_pos = reason_mode[1]  # type: ignore
+
     module, data = run(config)
 
     if torch.cuda.is_available():

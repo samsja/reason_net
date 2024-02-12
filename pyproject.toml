@@ -7,7 +7,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-torch =  ">=2.1.0"
+torch = ">=2.1.0"
 wandb = ">=0.15.3"
 lightning = ">=2.1.0"
 jaxtyping = ">=0.2.25"
@@ -32,7 +32,7 @@ ignore_missing_imports = true
 
 [tool.ruff]
 ignore = [
-    "E501",  # line too long, handled by black
+    "E501", # line too long, handled by black
     "F722", # allow jaxtyping see here https://docs.kidger.site/jaxtyping/faq/#flake8-or-ruff-are-throwing-an-error
 ]
 

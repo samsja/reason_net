@@ -14,7 +14,7 @@ from lightning.pytorch.callbacks import ModelCheckpoint, Callback, LearningRateM
 import torch
 import wandb
 
-from reason_net.data import MathDataModule, MathDataConfig
+from reason_net.data import MathDataModule, MathDataConfig, ReasonConfig
 from reason_net.module import LLaMaModule, ModuleConfig
 
 
@@ -54,9 +54,11 @@ class RunConfig(Config):
     @model_validator(mode="after")
     def reason_mode_setup(self) -> Self:
         if self.reason_mode:
-            self.data.reason_net_data = True
+            if self.data.reason is None:
+                self.data.reason = ReasonConfig()
+                # this put default reason value in case none are passed
         else:
-            self.data.reason_net_data = False
+            self.data.reason = None
         return self
 
 
