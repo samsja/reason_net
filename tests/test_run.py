@@ -14,7 +14,7 @@ def raw_config() -> DictConfig:
         version_base=None,
         config_path="../reason_net/configs",
     ):
-        raw_conf = compose(config_name="default.yaml", overrides=["module/model=910K"])
+        raw_conf = compose(config_name="all-14m.yaml", overrides=["module/model=910K"])
 
     return raw_conf
 
