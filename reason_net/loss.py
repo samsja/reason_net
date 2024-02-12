@@ -1,6 +1,7 @@
 from typing import TypeAlias, TypeVar
 
 from torch import Tensor, nn
+import torch.nn.functional as F
 from jaxtyping import Float, Int, jaxtyped
 from beartype import beartype as typechecker
 
@@ -40,3 +41,24 @@ class MaxZLoss(nn.CrossEntropyLoss):
 
         z_loss = self.z_loss_w * max_logits.pow(2).mean()
         return loss, z_loss
+
+
+class EmebddingEntropyMinimizer(nn.Module):
+    """
+    This loss is mean to increase the entropy of a list of embeddings.
+
+    It is inspired by the Mean Entropy Maximization (ME-MAX) regularizer.
+
+    In a nutshell it tries to maximize the entropy over a learn distribution.
+
+    """
+
+    def __init__(self, in_features: int, out_features) -> None:
+        super().__init__()
+        self.linear = nn.Linear(in_features=in_features, out_features=out_features)
+
+    def forward(self, x: Logits) -> SingleFloat:
+        logits = self.linear(x)
+        probs = F.softmax(logits, dim=-1)
+        log_probs = F.log_softmax(logits, dim=-1)
+        return -(probs * log_probs).sum(dim=-1).mean()

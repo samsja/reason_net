@@ -57,8 +57,11 @@ class RunConfig(Config):
             if self.data.reason is None:
                 self.data.reason = ReasonConfig()
                 # this put default reason value in case none are passed
+            self.module.reason_mode = True
         else:
             self.data.reason = None
+            self.module.reason_mode = False
+
         return self
 
 

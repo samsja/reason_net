@@ -7,7 +7,7 @@ import torch
 from lightning import LightningModule
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from beartype import beartype as typechecker
-from reason_net.loss import MaxZLoss
+from reason_net.loss import EmebddingEntropyMinimizer, MaxZLoss
 from reason_net.pydantic_conf import Config
 
 from reason_net.data import BatchDataPoint, MathTokenizer
@@ -25,6 +25,7 @@ class ModuleConfig(Config):
     lr: float
     warmup_steps: int = 400
     z_loss_w: float = 2e-4
+    reason_mode: bool = False
 
 
 class LLaMaModule(LightningModule):
@@ -38,6 +39,13 @@ class LLaMaModule(LightningModule):
         self.loss = MaxZLoss(
             ignore_index=tokenizer.pad_token_id, z_loss_w=conf.z_loss_w
         )
+
+        if self.conf.reason_mode:
+            self.reason_loss = EmebddingEntropyMinimizer(
+                in_features=self.conf.model.padded_vocab_size, out_features=8
+            )
+            # 8 is a bit arbitrary, but I need at least out_feature << num_reason_token
+            # and multiple of 8 is good for the GPU
 
     @jaxtyped(typechecker=typechecker)
     def forward(self, x: Int[Tensor, "b seq"]) -> Float[Tensor, "b seq vocab_size"]:
@@ -81,6 +89,14 @@ class LLaMaModule(LightningModule):
         self.log(f"{step_name}_max_z_loss", max_z_loss)
 
         loss = loss + max_z_loss
+
+        if self.conf.reason_mode:
+            reason_logits = logits[input == self.tokenizer.reason_token_id]
+
+            reason_logits_entropy = self.reason_loss(reason_logits)
+            self.log(f"{step_name}_reason_loss", reason_logits_entropy)
+
+            loss = loss + reason_logits_entropy
 
         if accuracy:
             ignore_mask = target != self.tokenizer.pad_token_id
