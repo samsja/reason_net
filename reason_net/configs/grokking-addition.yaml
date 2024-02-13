@@ -18,6 +18,7 @@ module:
 trainer:
   pl:
     val_check_interval: 1
+    max_epochs: 100000
 
 wandb:
   enabled: true
