@@ -20,13 +20,18 @@ b = TypeVar("b")
 Batch: TypeAlias = tuple[Int[Tensor, "b seq_input"], Int[Tensor, "b seq_output"]]
 
 
+class ReasonModuleConfig(Config):
+    reason_token_num: int
+    reason_loss_w: float = 2e-4
+
+
 class ModuleConfig(Config):
     model: LLaMaConfig
     lr: float
     warmup_steps: int = 400
     z_loss_w: float = 2e-4
 
-    reason_token_num: int | None = None
+    reason: ReasonModuleConfig | None = None
 
 
 class LLaMaModule(LightningModule):
@@ -84,16 +89,18 @@ class LLaMaModule(LightningModule):
 
         loss = loss + max_z_loss
 
-        if self.conf.reason_token_num:
+        if self.conf.reason:
             reason_logits = logits[input == self.tokenizer.reason_token_id]
 
             reason_logits = rearrange(
                 reason_logits,
                 "(b n) vocab -> b n vocab",
                 b=data.shape[0],
-                n=self.conf.reason_token_num,
+                n=self.conf.reason.reason_token_num,
             )
-            reason_logits_entropy = sim_clr_loss(reason_logits)
+            reason_logits_entropy = self.conf.reason.reason_loss_w * sim_clr_loss(
+                reason_logits
+            )
             self.log(f"{step_name}_reason_loss", reason_logits_entropy)
 
             loss = loss + reason_logits_entropy
