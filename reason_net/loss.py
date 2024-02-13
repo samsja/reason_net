@@ -1,9 +1,12 @@
 from typing import TypeAlias, TypeVar
+from einops import rearrange, repeat
 
 from torch import Tensor, nn
+import torch
 import torch.nn.functional as F
 from jaxtyping import Float, Int, jaxtyped
 from beartype import beartype as typechecker
+
 
 X = TypeVar("X")
 
@@ -43,22 +46,15 @@ class MaxZLoss(nn.CrossEntropyLoss):
         return loss, z_loss
 
 
-class EmebddingEntropyMinimizer(nn.Module):
-    """
-    This loss is mean to increase the entropy of a list of embeddings.
+def sim_clr_loss(x: Float[Tensor, "batch seq n_embd"]) -> SingleFloat:
+    x = F.normalize(x, dim=-1)
+    x_t = rearrange(x, "batch seq n_embd -> batch n_embd seq")
+    sim = x @ x_t
 
-    It is inspired by the Mean Entropy Maximization (ME-MAX) regularizer.
+    seq, b = sim.shape[1], sim.shape[0]
 
-    In a nutshell it tries to maximize the entropy over a learn distribution.
+    eye = repeat(
+        torch.eye(seq, device=sim.device, dtype=sim.dtype), "s1 s2-> b s1 s2", b=b
+    )
 
-    """
-
-    def __init__(self, in_features: int, out_features) -> None:
-        super().__init__()
-        self.linear = nn.Linear(in_features=in_features, out_features=out_features)
-
-    def forward(self, x: Logits) -> SingleFloat:
-        logits = self.linear(x)
-        probs = F.softmax(logits, dim=-1)
-        log_probs = F.log_softmax(logits, dim=-1)
-        return (probs * log_probs).sum(dim=-1).mean()
+    return torch.norm(sim - eye, p=2)
