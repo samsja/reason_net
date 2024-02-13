@@ -1,0 +1,4 @@
+block_size: 64
+n_layer: 1
+n_head: 4
+n_embd: 128

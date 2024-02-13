@@ -83,6 +83,7 @@ class MathDataConfig(Config):
     batch_size: int
     num_workers: int
     dataset_path: Path
+    train_prop: float = 0.8
 
     reason: ReasonConfig | None = None
 
@@ -244,7 +245,6 @@ BatchDataPoint: TypeAlias = tuple[Int[Tensor, "b seq"], Int[Tensor, "b seq_minus
 
 
 class MathDataModule(L.LightningDataModule):
-    train_prop: ClassVar[float] = 0.8
 
     def __init__(self, conf: MathDataConfig):
         super().__init__()
@@ -275,7 +275,7 @@ class MathDataModule(L.LightningDataModule):
                 )
 
     def setup(self, stage: str) -> None:
-        train_size = int(self.train_prop * len(self.dataset))
+        train_size = int(self.conf.train_prop * len(self.dataset))
         val_size = len(self.dataset) - train_size
 
         self.train, self.val = random_split(
