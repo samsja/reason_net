@@ -8,7 +8,6 @@ from reason_net.generate import generate
 from hydra import compose, initialize
 
 
-@pytest.fixture
 def raw_config() -> DictConfig:
     with initialize(
         version_base=None,
@@ -19,9 +18,8 @@ def raw_config() -> DictConfig:
     return raw_conf
 
 
-def _init_config(cfg: DictConfig, tmp_path: Path) -> DictConfig:
+def _init_config(cfg: DictConfig) -> DictConfig:
     with open_dict(cfg):
-        cfg.trainer.save_dir = tmp_path
         cfg.trainer.pl.max_epochs = 2
         cfg.data.num_workers = 0
         cfg.wandb.enabled = False
@@ -34,17 +32,37 @@ def _init_config(cfg: DictConfig, tmp_path: Path) -> DictConfig:
     return cfg
 
 
+def normal_config() -> DictConfig:
+    raw_conf = _init_config(raw_config())
+    config = omegaconf_to_pydantic(raw_conf)
+
+    config.reason_mode = False
+    return config
+
+
+def reason_middle_config() -> DictConfig:
+    raw_conf = _init_config(raw_config())
+    config = omegaconf_to_pydantic(raw_conf)
+
+    config.reason_mode = True
+    config.data.reason.reason_token_pos = "middle"  # type: ignore
+    return config
+
+
+def reason_left_config() -> DictConfig:
+    raw_conf = _init_config(raw_config())
+    config = omegaconf_to_pydantic(raw_conf)
+
+    config.reason_mode = True
+    config.data.reason.reason_token_pos = "left"  # type: ignore
+    return config
+
+
 @pytest.mark.parametrize(
-    "reason_mode", [(False, "middle"), (True, "middle"), (True, "left")]
+    "config", [normal_config(), reason_middle_config(), reason_left_config()]
 )
-def test_run(raw_config: DictConfig, tmp_path: Path, reason_mode: tuple[bool, str]):
-    raw_config = _init_config(raw_config, tmp_path)
-
-    config = omegaconf_to_pydantic(raw_config)
-    config.reason_mode = reason_mode[0]
-
-    if reason_mode[0]:
-        config.data.reason.reason_token_pos = reason_mode[1]  # type: ignore
+def test_run(config: DictConfig, tmp_path: Path):
+    config.trainer.save_dir = tmp_path
 
     module, data = run(config)
 
