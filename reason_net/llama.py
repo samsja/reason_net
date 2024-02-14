@@ -43,6 +43,8 @@ class LLaMaConfig(Config):
     n_head: int
     n_embd: int
 
+    repeat_layers: int | None = None
+
     @model_validator(mode="before")
     def set_padded_vocab_size(cls, values: dict[str, Any]):
         """Set the padded vocab size to the next multiple of 64 if not provided."""
@@ -104,7 +106,11 @@ class LLaMA(nn.Module):
         x = self.transformer.wte(idx)  # token embeddings of shape (b, t, n_embd)
 
         for block in self.transformer.h:
-            x = block(x, rope, mask)
+            if self.conf.repeat_layers is not None:
+                for _ in range(self.conf.repeat_layers):
+                    x = block(x, rope, mask)
+            else:
+                x = block(x, rope, mask)
 
         x = self.transformer.ln_f(x)
 
