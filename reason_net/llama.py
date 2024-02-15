@@ -105,10 +105,11 @@ class LLaMA(nn.Module):
         # forward the model itself
         x = self.transformer.wte(idx)  # token embeddings of shape (b, t, n_embd)
 
-        for block in self.transformer.h:
+        for i, block in enumerate(self.transformer.h):
             if self.conf.repeat_layers is not None:
-                for _ in range(self.conf.repeat_layers):
-                    x = block(x, rope, mask)
+                if i == self.conf.n_layer - 1:
+                    for _ in range(self.conf.repeat_layers):
+                        x = block(x, rope, mask)
             else:
                 x = block(x, rope, mask)
 
