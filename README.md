@@ -1,7 +1,7 @@
 # ReasonNet
 
 
-generate data (for data-100m.txt)
+## generate data (for data-100m.txt)
 
 ```bash
 cd data_gen
@@ -14,8 +14,15 @@ mv data-100m-all.txt ../datasets/.
 
 ```
 
+For the addition grokking run:
 
-run the training
+```bash
+ cargo run --release -- --min 4 --max 5 --size 7000 --seed 32 --save-file-path data-grokking-addition.txt --operators +
+mv data-grokking-addition.txt ../datasets/.
+```
+
+
+## run the training
 
 
 normal 
@@ -42,4 +49,10 @@ With small model for test
 
 ```bash
 python reason_net/run.py --config-path configs --config-name all-14m.yaml module/model=910K
+```
+
+addition grokking:
+
+```bash
+python reason_net/run.py --config-path configs --config-name grokking-addition.yaml
 ```

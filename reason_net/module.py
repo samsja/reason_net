@@ -23,6 +23,7 @@ Batch: TypeAlias = tuple[Int[Tensor, "b seq_input"], Int[Tensor, "b seq_output"]
 class ModuleConfig(Config):
     model: LLaMaConfig
     lr: float
+    weight_decay: float = 1e-2
     warmup_steps: int = 400
     z_loss_w: float = 2e-4
 
@@ -44,7 +45,7 @@ class LLaMaModule(LightningModule):
         return self.model(x)
 
     def configure_optimizers(self) -> OptimizerLRScheduler:
-        optimizer = torch.optim.AdamW(self.parameters(), lr=self.conf.lr)
+        optimizer = torch.optim.AdamW(self.parameters(), lr=self.conf.lr, weight_decay=self.conf.weight_decay)
 
         lr_scheduler = torch.optim.lr_scheduler.LinearLR(
             optimizer,

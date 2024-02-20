@@ -1,0 +1,25 @@
+reason_mode: false
+
+defaults:
+  - module/model: single-layer
+  - default
+  - _self_
+
+data:
+  batch_size: 8196
+  train_prop: 0.1
+  num_workers: 4
+  dataset_path: datasets/data-grokking-addition.txt
+
+module:
+  lr: 0.001
+  weight_decay: 1
+
+trainer:
+  pl:
+    val_check_interval: 1
+    max_epochs: 100000
+
+wandb:
+  enabled: true
+  project_name: "reason_net_add"
