@@ -67,15 +67,19 @@ def run(conf: RunConfig) -> tuple[LLaMaModule, MathDataModule]:
     module = LLaMaModule(conf.module, data.tokenizer)
 
     if not (conf.wandb.enabled):
-        run = wandb.init(mode="disabled")  # type: ignore
+        _ = wandb.init(mode="disabled")  # type: ignore
+        wandb_logger = WandbLogger(save_dir=conf.trainer.save_dir)
     else:
-        run = wandb.init(project=conf.wandb.project_name, name=conf.wandb.name)  # type: ignore
+        wandb_logger = WandbLogger(
+            save_dir=conf.trainer.save_dir,
+            project=conf.wandb.project_name,
+            name=conf.wandb.name,
+        )
 
-    wandb_logger = WandbLogger(save_dir=conf.trainer.save_dir)
     wandb_logger.log_hyperparams(conf.model_dump())
 
     checkpoint_callback = ModelCheckpoint(
-        dirpath=conf.trainer.save_dir / Path(run.name),  # type: ignore
+        dirpath=conf.trainer.save_dir / Path(wandb_logger.name),  # type: ignore
         monitor="val_loss",
         filename="reason_net-{epoch:02d}-{val_loss:.2f}",
         save_top_k=2,
