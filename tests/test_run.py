@@ -22,6 +22,7 @@ def _init_config() -> RunConfig:
 
         cfg.trainer.callbacks = {
             "norm_monitor": {"log_every_n_steps": 1},
+            "perf_monitor": {"log_every_n_batchs": 2},
         }
 
     return omegaconf_to_pydantic(cfg)

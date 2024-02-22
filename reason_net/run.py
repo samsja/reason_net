@@ -4,6 +4,7 @@ from typing_extensions import Self
 import hydra
 from omegaconf import DictConfig, OmegaConf
 from reason_net.calllbacks.norm_monitor import NormMonitorConfig
+from reason_net.calllbacks.perf_monitor import PerfMonitorConfig
 from reason_net.pydantic_conf import Config
 from pydantic import model_validator
 from lightning import Trainer
@@ -35,6 +36,7 @@ class WandbConfig(Config):
 
 class CallbackConfig(Config):
     norm_monitor: NormMonitorConfig | None = None
+    perf_monitor: PerfMonitorConfig | None = None
 
 
 class TrainerConfig(Config):
