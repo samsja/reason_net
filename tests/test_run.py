@@ -53,8 +53,23 @@ def reason_left_config() -> RunConfig:
     return config
 
 
+def normal_repeat_config() -> RunConfig:
+    config = _init_config()
+
+    config.reason_mode = False
+    config.module.model.repeat_layers = 2
+
+    return config
+
+
 @pytest.mark.parametrize(
-    "config", [normal_config(), reason_middle_config(), reason_left_config()]
+    "config",
+    [
+        normal_config(),
+        reason_middle_config(),
+        reason_left_config(),
+        normal_repeat_config(),
+    ],
 )
 def test_run(config: RunConfig, tmp_path: Path):
     config.trainer.save_dir = tmp_path
