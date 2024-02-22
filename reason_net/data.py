@@ -251,7 +251,7 @@ class MathDataModule(L.LightningDataModule):
         self.conf = conf
         self.tokenizer = MathTokenizer()
 
-    def prepare_data(self) -> None:
+    def setup(self, stage: str) -> None:
         self.data_collator: typing.Any
 
         self.dataset: BaseMathDataset
@@ -274,7 +274,6 @@ class MathDataModule(L.LightningDataModule):
                     reason_token_num=self.conf.reason.reason_token_num,
                 )
 
-    def setup(self, stage: str) -> None:
         train_size = int(self.train_prop * len(self.dataset))
         val_size = len(self.dataset) - train_size
 
