@@ -44,10 +44,19 @@ class PerfMonitor(Callback):
                 end = time.time()
 
                 time_elapsed = end - self.start_time
+
+                # we multiply by world_size to get the total sample seen
+
                 logs = {
-                    "perf/sample_per_sec": self.total_sample_seen / time_elapsed,
-                    "perf/batch_per_sec": self.num_batch_seen / time_elapsed,
-                    "perf/token_per_sec": self.total_token_seen / time_elapsed,
+                    "perf/sample_per_sec": trainer.world_size
+                    * self.total_sample_seen
+                    / time_elapsed,
+                    "perf/batch_per_sec": trainer.world_size
+                    * self.num_batch_seen
+                    / time_elapsed,
+                    "perf/token_per_sec": trainer.world_size
+                    * self.total_token_seen
+                    / time_elapsed,
                 }
 
                 for metric_name, metric_val in list(logs.items()):
