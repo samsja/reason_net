@@ -63,7 +63,7 @@ class PerfMonitor(Callback):
 
         self.num_batch_seen += 1
         self.total_sample_seen += len(batch[0])
-        self.total_token_seen += len(batch[0][0])
+        self.total_token_seen += len(batch[0]) * len(batch[0][0])
 
 
 class PerfMonitorConfig(Config):
