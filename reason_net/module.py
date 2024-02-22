@@ -77,8 +77,8 @@ class LLaMaModule(LightningModule):
 
         loss, max_z_loss = self.loss(flatten_logits, flatten_target)
 
-        self.log(f"{step_name}_loss", loss)
-        self.log(f"{step_name}_max_z_loss", max_z_loss)
+        self.log(f"{step_name}_loss", loss, sync_dist=True)
+        self.log(f"{step_name}_max_z_loss", max_z_loss, sync_dist=True)
 
         loss = loss + max_z_loss
 
@@ -89,7 +89,7 @@ class LLaMaModule(LightningModule):
                 .float()
                 .mean()
             )
-            self.log(f"{step_name}_token_accuracy", token_acc)
+            self.log(f"{step_name}_token_accuracy", token_acc, sync_dist=True)
         else:
             token_acc = torch.tensor(0.0)
 
