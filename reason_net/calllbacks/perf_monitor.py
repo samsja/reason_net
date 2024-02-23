@@ -6,8 +6,7 @@ from pydantic import PrivateAttr
 from lightning.pytorch.utilities.rank_zero import rank_zero_only
 from lightning.pytorch.callbacks import Callback
 
-from typing import TYPE_CHECKING, Any, Type
-from reason_net.data import BatchDataPoint
+from typing import TYPE_CHECKING, Any, Type, no_type_check
 
 from reason_net.pydantic_conf import Config
 
@@ -26,16 +25,15 @@ class PerfMonitor(Callback):
 
         self.start_time: float | None = None
 
+    @no_type_check
     @rank_zero_only
     def on_train_batch_end(
         self,
         trainer: "Trainer",
         pl_module: "LLaMaModule",
-        _outputs: Any,
-        batch: BatchDataPoint,
+        outputs: Any,
+        batch: Any,
         batch_idx: int,
-        *args,
-        **kwargs,
     ) -> None:
         if self.num_batch_seen % self.config.log_every_n_batchs == 0:
             if self.start_time is None:
