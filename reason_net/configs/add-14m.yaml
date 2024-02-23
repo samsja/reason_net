@@ -1,0 +1,20 @@
+defaults:
+  - module/model: 14M
+  - default
+  - _self_
+
+data:
+  batch_size: 8196
+  num_workers: 4
+  dataset_path: data-25m-add.txt
+
+module:
+  lr: 5e-3
+
+trainer:
+  pl:
+    val_check_interval: 0.5
+
+wandb:
+  enabled: true
+  project_name: "reason_net_add"
