@@ -18,7 +18,7 @@ def _init_config() -> RunConfig:
         cfg.trainer.pl.max_epochs = 2
         cfg.data.num_workers = 0
         cfg.wandb.enabled = False
-        cfg.data.dataset_path = Path("tests/data-test.txt")
+        cfg.data.dataset_path = Path("tests/data-test")
 
         cfg.trainer.callbacks = {
             "norm_monitor": {"log_every_n_steps": 1},

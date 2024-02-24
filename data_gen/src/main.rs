@@ -1,3 +1,5 @@
+use std::path::{Path, PathBuf};
+
 use clap::Parser;
 use indicatif::ProgressBar;
 use rand::rngs::StdRng;
@@ -22,13 +24,19 @@ struct Args {
     seed: u64,
 
     #[arg(long)]
-    save_file_path: String,
+    save_path: String,
 
     #[arg(long, default_value = "+-*/%")]
     operators: String,
 
     #[arg(long, default_value = "n")]
     short: String,
+
+    #[arg(long, default_value = "40960")]
+    chunk_size: usize,
+
+    #[arg(long, default_value = "0.1")]
+    val_prop: f32,
 }
 
 fn generate_operator(a: i64, b: i64, operator: char) -> String {
@@ -58,7 +66,26 @@ fn generate_datapoint(min: u32, max: u32, rng: &mut StdRng, operators: String) -
     exo
 }
 
+fn creater_folder(path: &str) {
+    match std::fs::create_dir(&Path::new(path)) {
+        Ok(_) => {}
+        Err(e) => println!("Failed to create directory: {}", e),
+    }
+
+    match std::fs::create_dir(&Path::new(path).join("val")) {
+        Ok(_) => {}
+        Err(e) => println!("Failed to create directory: {}", e),
+    }
+
+    match std::fs::create_dir(&Path::new(path).join("train")) {
+        Ok(_) => {}
+        Err(e) => println!("Failed to create directory: {}", e),
+    }
+}
+
 fn generate_all(conf: Args) {
+    creater_folder(&conf.save_path);
+
     let mut rng = StdRng::seed_from_u64(conf.seed);
 
     let mut unique_exos: FxHashSet<String> = FxHashSet::default();
@@ -109,7 +136,21 @@ fn generate_all(conf: Args) {
 
     exo_to_save.shuffle(&mut rng);
 
-    std::fs::write(conf.save_file_path, exo_to_save.join("\n")).unwrap();
+    let split_index = (exo_to_save.len() as f64 * 0.9).floor() as usize;
+
+    let exo_val = exo_to_save.split_off(split_index);
+
+    let path_train = PathBuf::from(conf.save_path.clone()).join("train");
+    for (i, chunk) in exo_to_save.chunks(conf.chunk_size).enumerate() {
+        let path = path_train.join(format!("chunk_{}.txt", i));
+        std::fs::write(path, chunk.join("\n")).unwrap();
+    }
+
+    let path_val = PathBuf::from(conf.save_path.clone()).join("val");
+    for (i, chunk) in exo_val.chunks(conf.chunk_size).enumerate() {
+        let path = path_val.join(format!("chunk_{}.txt", i));
+        std::fs::write(path, chunk.join("\n")).unwrap();
+    }
 }
 
 fn main() {
