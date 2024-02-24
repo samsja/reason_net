@@ -11,6 +11,10 @@ data:
 module:
   lr: 1e-2
 
+trainer:
+  pl:
+    val_check_interval: 3000 # this means two time per epoch
+
 wandb:
   enabled: true
   project_name: "reason_net_add"

@@ -32,7 +32,7 @@ struct Args {
     #[arg(long, default_value = "n")]
     short: String,
 
-    #[arg(long, default_value = "4096")]
+    #[arg(long, default_value = "40960")]
     chunk_size: usize,
 
     #[arg(long, default_value = "0.1")]
