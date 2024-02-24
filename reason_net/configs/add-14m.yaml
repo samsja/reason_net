@@ -6,11 +6,15 @@ defaults:
 data:
   batch_size: 8196
   num_workers: 4
-  dataset_path: datasets/data-100m-all
+  dataset_path: data-25m-add.txt
+
+module:
+  lr: 5e-3
 
 trainer:
   pl:
     val_check_interval: 2000
 
-module:
-  lr: 5e-3
+wandb:
+  enabled: true
+  project_name: "reason_net_add"
