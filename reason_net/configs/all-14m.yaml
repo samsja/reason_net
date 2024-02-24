@@ -10,7 +10,7 @@ data:
 
 trainer:
   pl:
-    val_check_interval: 11000 # this means two time per epoch (0.9*10**8 / 8196)
+    val_check_interval: 2000
 
 module:
   lr: 5e-3

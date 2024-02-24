@@ -13,7 +13,7 @@ module:
 
 trainer:
   pl:
-    val_check_interval: 3000 # this means two time per epoch
+    val_check_interval: 2000
 
 wandb:
   enabled: true
