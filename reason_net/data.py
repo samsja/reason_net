@@ -104,9 +104,15 @@ class BaseMathDataset(IterableDataset, ABC):
         self,
         dataset_path: Path,
         tokenizer: MathTokenizer,
+        val: bool = False,
     ) -> None:
         super().__init__()
-        self.dataset_path = dataset_path
+
+        if val:
+            self.dataset_path = dataset_path / "val"
+        else:
+            self.dataset_path = dataset_path / "train"
+
         self.tokenizer = tokenizer
 
         self.chunks_files = os.listdir(self.dataset_path)
@@ -193,8 +199,9 @@ class MathDatasetReasonMiddle(BaseMathDataset):
         dataset_path: Path,
         tokenizer: MathTokenizer,
         reason_token_num: int,
+        val: bool = False,
     ) -> None:
-        super().__init__(dataset_path, tokenizer)
+        super().__init__(dataset_path, tokenizer, val=val)
         self.reason_token_num = reason_token_num
 
     def preprocess_data_point(self, data_point: str) -> DatasetOutput:
@@ -224,8 +231,9 @@ class MathDatasetReasonLeft(BaseMathDataset):
         dataset_path: Path,
         tokenizer: MathTokenizer,
         reason_token_num: int,
+        val: bool = False,
     ) -> None:
-        super().__init__(dataset_path, tokenizer)
+        super().__init__(dataset_path, tokenizer, val=val)
         self.reason_token_num = reason_token_num
 
     def preprocess_data_point(self, data_point: str) -> DatasetOutput:
@@ -256,36 +264,47 @@ class MathDataModule(L.LightningDataModule):
     def setup(self, stage: str) -> None:
         self.data_collator: typing.Any
 
-        self.dataset: BaseMathDataset
+        self.train: BaseMathDataset
+        self.val: BaseMathDataset
 
         if not self.conf.reason:
-            self.dataset = MathDataset(self.conf.dataset_path, self.tokenizer)
+            self.train = MathDataset(self.conf.dataset_path, self.tokenizer)
+            self.val = MathDataset(self.conf.dataset_path, self.tokenizer, val=True)
 
         else:
             if self.conf.reason.reason_token_pos == "middle":
-                self.dataset = MathDatasetReasonMiddle(
+                self.train = MathDatasetReasonMiddle(
                     self.conf.dataset_path,
                     self.tokenizer,
                     reason_token_num=self.conf.reason.reason_token_num,
+                )
+
+                self.val = MathDatasetReasonMiddle(
+                    self.conf.dataset_path,
+                    self.tokenizer,
+                    reason_token_num=self.conf.reason.reason_token_num,
+                    val=True,
                 )
 
             elif self.conf.reason.reason_token_pos == "left":
-                self.dataset = MathDatasetReasonLeft(
+                self.train = MathDatasetReasonLeft(
                     self.conf.dataset_path,
                     self.tokenizer,
                     reason_token_num=self.conf.reason.reason_token_num,
                 )
-
-        # todo fix this
-        self.train = self.dataset
-        self.val = self.dataset
+                self.val = MathDatasetReasonLeft(
+                    self.conf.dataset_path,
+                    self.tokenizer,
+                    reason_token_num=self.conf.reason.reason_token_num,
+                    val=True,
+                )
 
     def train_dataloader(self) -> DataLoader:
         return DataLoader(
             self.train,
             batch_size=self.conf.batch_size,
             num_workers=self.conf.num_workers,
-            collate_fn=self.dataset.collate_batch,
+            collate_fn=self.train.collate_batch,
         )
 
     def val_dataloader(self) -> DataLoader:
@@ -293,7 +312,7 @@ class MathDataModule(L.LightningDataModule):
             self.val,
             batch_size=self.conf.batch_size,
             num_workers=self.conf.num_workers,
-            collate_fn=self.dataset.collate_batch,
+            collate_fn=self.val.collate_batch,
         )
 
     def test_dataloader(self) -> DataLoader:

@@ -34,6 +34,9 @@ struct Args {
 
     #[arg(long, default_value = "4096")]
     chunk_size: usize,
+
+    #[arg(long, default_value = "0.1")]
+    val_prop: f32,
 }
 
 fn generate_operator(a: i64, b: i64, operator: char) -> String {
@@ -63,11 +66,25 @@ fn generate_datapoint(min: u32, max: u32, rng: &mut StdRng, operators: String) -
     exo
 }
 
-fn generate_all(conf: Args) {
-    match std::fs::create_dir(&Path::new(&conf.save_path)) {
+fn creater_folder(path: &str) {
+    match std::fs::create_dir(&Path::new(path)) {
         Ok(_) => {}
         Err(e) => println!("Failed to create directory: {}", e),
     }
+
+    match std::fs::create_dir(&Path::new(path).join("val")) {
+        Ok(_) => {}
+        Err(e) => println!("Failed to create directory: {}", e),
+    }
+
+    match std::fs::create_dir(&Path::new(path).join("train")) {
+        Ok(_) => {}
+        Err(e) => println!("Failed to create directory: {}", e),
+    }
+}
+
+fn generate_all(conf: Args) {
+    creater_folder(&conf.save_path);
 
     let mut rng = StdRng::seed_from_u64(conf.seed);
 
@@ -119,8 +136,19 @@ fn generate_all(conf: Args) {
 
     exo_to_save.shuffle(&mut rng);
 
+    let split_index = (exo_to_save.len() as f64 * 0.9).floor() as usize;
+
+    let exo_val = exo_to_save.split_off(split_index);
+
+    let path_train = PathBuf::from(conf.save_path.clone()).join("train");
     for (i, chunk) in exo_to_save.chunks(conf.chunk_size).enumerate() {
-        let path = PathBuf::from(conf.save_path.clone()).join(format!("chunk_{}.txt", i));
+        let path = path_train.join(format!("chunk_{}.txt", i));
+        std::fs::write(path, chunk.join("\n")).unwrap();
+    }
+
+    let path_val = PathBuf::from(conf.save_path.clone()).join("val");
+    for (i, chunk) in exo_val.chunks(conf.chunk_size).enumerate() {
+        let path = path_val.join(format!("chunk_{}.txt", i));
         std::fs::write(path, chunk.join("\n")).unwrap();
     }
 }
