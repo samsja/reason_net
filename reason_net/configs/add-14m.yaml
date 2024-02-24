@@ -6,7 +6,7 @@ defaults:
 data:
   batch_size: 8196
   num_workers: 4
-  dataset_path: data-25m-add
+  dataset_path: datasets/data-25m-add
 
 module:
   lr: 5e-3
