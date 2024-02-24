@@ -1,18 +1,18 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections import defaultdict
+import os
 from pathlib import Path
-from typing import ClassVar, Literal, TypeAlias, TypeVar
+from typing import ClassVar, Generator, Literal, TypeAlias, TypeVar
 import typing
 
 from reason_net.pydantic_conf import Config
 import torch
 from torch import Tensor
 import lightning as L
-from torch.utils.data import Dataset, random_split, DataLoader
+from torch.utils.data import IterableDataset, DataLoader
 from jaxtyping import Int, jaxtyped
 from beartype import beartype as typechecker
-import numpy as np
 
 
 class MathTokenizer:
@@ -94,7 +94,7 @@ b = TypeVar("b")
 DatasetOutput: TypeAlias = tuple[list[int], dict[str, int]]
 
 
-class BaseMathDataset(Dataset, ABC):
+class BaseMathDataset(IterableDataset, ABC):
     """
     This just load a file split by the equal sign and a define simple
     padded data collator
@@ -109,20 +109,21 @@ class BaseMathDataset(Dataset, ABC):
         self.dataset_path = dataset_path
         self.tokenizer = tokenizer
 
-        raw_data = list()
-        with open(dataset_path, "r") as f:
-            for line in f:
-                raw_data.append(line.strip())
+        self.chunks_files = os.listdir(self.dataset_path)
 
-        self.data = np.array(raw_data)
-        # seeh her why np array and not list https://docs.aws.amazon.com/codeguru/detector-library/python/pytorch-data-loader-with-multiple-workers/ # noqa: E501
+        if len(self.chunks_files) == 0:
+            raise ValueError(f"No file in {self.dataset_path}")
 
-    def __len__(self):
-        return len(self.data)
+        self.chunks_files.sort()
 
-    def get_data_point(self, idx) -> tuple[list[int], list[int]]:
-        data_point: str = self.data[idx]
+    def __iter__(self) -> Generator[DatasetOutput, None, None]:
+        for chunk_file in self.chunks_files:
+            with open(self.dataset_path / chunk_file, "r") as f:
+                for line in f:
+                    data_point = line.strip()
+                    yield self.preprocess_data_point(data_point)
 
+    def split_data_point(self, data_point: str) -> tuple[list[int], list[int]]:
         [left, right] = data_point.split("=")
 
         data_left = self.tokenizer.encode(left)
@@ -131,7 +132,7 @@ class BaseMathDataset(Dataset, ABC):
         return data_left, data_right
 
     @abstractmethod
-    def __getitem__(self, idx) -> DatasetOutput:
+    def preprocess_data_point(self, data_point: str) -> DatasetOutput:
         ...
 
     @jaxtyped(typechecker=typechecker)
@@ -167,8 +168,8 @@ class BaseMathDataset(Dataset, ABC):
 
 
 class MathDataset(BaseMathDataset):
-    def __getitem__(self, idx) -> DatasetOutput:
-        data_left, data_right = self.get_data_point(idx)
+    def preprocess_data_point(self, data_point: str) -> DatasetOutput:
+        data_left, data_right = self.split_data_point(data_point)
 
         data = (
             data_left
@@ -196,8 +197,9 @@ class MathDatasetReasonMiddle(BaseMathDataset):
         super().__init__(dataset_path, tokenizer)
         self.reason_token_num = reason_token_num
 
-    def __getitem__(self, idx) -> DatasetOutput:
-        data_left, data_right = self.get_data_point(idx)
+    def preprocess_data_point(self, data_point: str) -> DatasetOutput:
+        data_left, data_right = self.split_data_point(data_point)
+
         data = (
             data_left
             + [self.tokenizer.equal_token_id]  # add back the equal token
@@ -226,8 +228,8 @@ class MathDatasetReasonLeft(BaseMathDataset):
         super().__init__(dataset_path, tokenizer)
         self.reason_token_num = reason_token_num
 
-    def __getitem__(self, idx) -> DatasetOutput:
-        data_left, data_right = self.get_data_point(idx)
+    def preprocess_data_point(self, data_point: str) -> DatasetOutput:
+        data_left, data_right = self.split_data_point(data_point)
         data = (
             [self.tokenizer.reason_token_id] * self.reason_token_num
             + data_left
@@ -274,14 +276,9 @@ class MathDataModule(L.LightningDataModule):
                     reason_token_num=self.conf.reason.reason_token_num,
                 )
 
-        train_size = int(self.train_prop * len(self.dataset))
-        val_size = len(self.dataset) - train_size
-
-        self.train, self.val = random_split(
-            self.dataset,
-            [train_size, val_size],
-            generator=torch.Generator().manual_seed(self.conf.seed),
-        )
+        # todo fix this
+        self.train = self.dataset
+        self.val = self.dataset
 
     def train_dataloader(self) -> DataLoader:
         return DataLoader(

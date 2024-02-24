@@ -6,7 +6,7 @@ defaults:
 data:
   batch_size: 8196
   num_workers: 4
-  dataset_path: datasets/data-100m-all.txt
+  dataset_path: datasets/data-100m-all
 
 module:
   lr: 5e-3

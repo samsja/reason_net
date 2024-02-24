@@ -4,7 +4,6 @@ trainer:
 
   pl:
     devices: 1
-    val_check_interval: 0.5
     max_epochs: 25
 
   save_dir: "lightning_logs"
