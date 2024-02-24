@@ -13,7 +13,7 @@ module:
 
 trainer:
   pl:
-    val_check_interval: 2000
+    val_check_interval: 100
 
 wandb:
   enabled: true
