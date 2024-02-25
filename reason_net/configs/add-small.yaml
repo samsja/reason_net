@@ -1,10 +1,10 @@
 defaults:
-  - module/model: 4M
+  - module/model: small
   - default
   - _self_
 
 data:
-  batch_size: 9830
+  batch_size: 24576
   num_workers: 4
   dataset_path: datasets/data-25m-add
 
