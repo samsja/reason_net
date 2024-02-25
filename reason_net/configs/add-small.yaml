@@ -17,4 +17,4 @@ trainer:
 
 wandb:
   enabled: true
-  project_name: "reason_net_add"
+  project_name: "reason_net_add_small"
