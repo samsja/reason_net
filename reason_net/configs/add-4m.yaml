@@ -1,19 +1,19 @@
 defaults:
-  - module/model: 910K
+  - module/model: 4M
   - default
   - _self_
 
 data:
-  batch_size: 8196
+  batch_size: 9830
   num_workers: 4
   dataset_path: datasets/data-25m-add
 
 module:
-  lr: 1e-2
+  lr: 1e-3
 
 trainer:
   pl:
-    val_check_interval: 2000
+    val_check_interval: 1000
 
 wandb:
   enabled: true
