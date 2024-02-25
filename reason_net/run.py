@@ -24,7 +24,7 @@ class PlTrainerConfig(Config):
     max_epochs: int = 1
     log_every_n_steps: int = 1
     devices: int
-    val_check_interval: int = 1
+    val_check_interval: int | float = 1.0
     gradient_clip_val: float | None = 1.0
 
 
