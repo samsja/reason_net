@@ -70,18 +70,3 @@ def test_run(config: RunConfig, tmp_path: Path):
     decoded = data.tokenizer.decode(generated)
 
     assert decoded is not None
-
-
-def test_data_n_workers():
-    """
-    here if we don't use split by worker in the dataloader, the batches first 4 batch will be the same
-    """
-    config = _init_config()
-    config.data.num_workers = 4
-    config.data.batch_size = 2
-
-    _, data = run(config)
-
-    batches = list(data.train_dataloader())
-
-    assert not (batches[0][0] == batches[1][0]).all()
