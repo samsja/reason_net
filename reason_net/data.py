@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 from typing import ClassVar, Generator, Literal, TypeAlias, TypeVar
 import typing
+from itertools import islice
+
 
 from reason_net.pydantic_conf import Config
 import torch
@@ -94,6 +96,24 @@ b = TypeVar("b")
 DatasetOutput: TypeAlias = tuple[list[int], dict[str, int]]
 
 
+def split_by_worker(
+    source: Generator[DatasetOutput, None, None],
+) -> Generator[DatasetOutput, None, None]:
+    winfo = torch.utils.data.get_worker_info()
+    if winfo is None:
+        yield from source
+    else:
+        yield from islice(source, winfo.id, None, winfo.num_workers)
+
+
+def split_by_rank(
+    source: Generator[DatasetOutput, None, None],
+    rank: int,
+    world_size: int,
+) -> Generator[DatasetOutput, None, None]:
+    yield from islice(source, rank, None, world_size)
+
+
 class BaseMathDataset(IterableDataset, ABC):
     """
     This just load a file split by the equal sign and a define simple
@@ -132,14 +152,30 @@ class BaseMathDataset(IterableDataset, ABC):
             self.last_chunk_size = len([line.strip() for line in f])
 
     def __len__(self) -> int:
-        return (len(self.chunks_files) - 1) * self.chunk_size + self.last_chunk_size
+        winfo = torch.utils.data.get_worker_info()
+        if winfo is None:
+            return (len(self.chunks_files) - 1) * self.chunk_size + self.last_chunk_size
+        else:
+            return (
+                (len(self.chunks_files) - 1) * self.chunk_size + self.last_chunk_size
+            ) // winfo.num_workers
+            # todo check here if the division is correct
 
-    def __iter__(self) -> Generator[DatasetOutput, None, None]:
+    def _raw_iter(self) -> Generator[DatasetOutput, None, None]:
         for chunk_file in self.chunks_files:
             with open(self.dataset_path / chunk_file, "r") as f:
                 for line in f:
                     data_point = line.strip()
                     yield self.preprocess_data_point(data_point)
+
+    def __iter__(self) -> Generator[DatasetOutput, None, None]:
+        if torch.distributed.is_available() and torch.distributed.is_initialized():
+            group = torch.distributed.group.WORLD
+            rank = torch.distributed.get_rank(group=group)
+            size = torch.distributed.get_world_size(group=group)
+            return split_by_worker(split_by_rank(self._raw_iter(), rank, size))
+        else:
+            return split_by_worker(self._raw_iter())
 
     def split_data_point(self, data_point: str) -> tuple[list[int], list[int]]:
         [left, right] = data_point.split("=")
