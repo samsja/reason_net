@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import ClassVar, Literal, TypeAlias, TypeVar
 import typing
 
+import numpy as np
+
 from reason_net.pydantic_conf import Config
 import torch
 from torch import Tensor
@@ -122,27 +124,18 @@ class BaseMathDataset(Dataset, ABC):
 
         self.chunks_files.sort()
 
-        with open(self.dataset_path / self.chunks_files[0], "r") as f:
-            self.chunk_size = len([line.strip() for line in f])
+        data = []
+        for chunk_file in self.chunks_files:
+            with open(self.dataset_path / chunk_file, "r") as f:
+                data.extend([line.strip() for line in f])
 
-        self.current_file: str | None = None
-        self.current_data: list[str]
-
-        with open(self.dataset_path / self.chunks_files[-1], "r") as f:
-            self.last_chunk_size = len([line.strip() for line in f])
+        self.data = np.array(data)
 
     def __len__(self) -> int:
-        return (len(self.chunks_files) - 1) * self.chunk_size + self.last_chunk_size
+        return len(self.data)
 
     def __getitem__(self, idx: int) -> DatasetOutput:
-        chunk_file = self.chunks_files[idx // self.chunk_size]
-
-        if self.current_file != chunk_file:
-            with open(self.dataset_path / chunk_file, "r") as f:
-                self.current_data = [line.strip() for line in f]
-                self.current_file = chunk_file
-
-        return self.preprocess_data_point(self.current_data[idx % self.chunk_size])
+        return self.preprocess_data_point(self.data[idx])
 
     def split_data_point(self, data_point: str) -> tuple[list[int], list[int]]:
         [left, right] = data_point.split("=")

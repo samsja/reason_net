@@ -79,8 +79,13 @@ def run(conf: RunConfig) -> tuple[LLaMaModule, MathDataModule]:
 
     wandb_logger.log_hyperparams(conf.model_dump())
 
+    save_sub_path = (
+        Path(wandb_logger._experiment.name)
+        if wandb_logger._experiment
+        else Path("undefined")
+    )
     checkpoint_callback = ModelCheckpoint(
-        dirpath=conf.trainer.save_dir / Path(wandb_logger._experiment.name),  # type: ignore
+        dirpath=conf.trainer.save_dir / save_sub_path,  # type: ignore
         monitor="val_loss",
         filename="reason_net-{epoch:02d}-{val_loss:.2f}",
         save_top_k=2,
