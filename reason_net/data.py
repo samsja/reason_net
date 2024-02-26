@@ -3,14 +3,14 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 import os
 from pathlib import Path
-from typing import ClassVar, Literal, TypeAlias, TypeVar
+from typing import ClassVar, Generator, Literal, TypeAlias, TypeVar
 import typing
 
 from reason_net.pydantic_conf import Config
 import torch
 from torch import Tensor
 import lightning as L
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import IterableDataset, DataLoader
 from jaxtyping import Int, jaxtyped
 from beartype import beartype as typechecker
 
@@ -94,7 +94,7 @@ b = TypeVar("b")
 DatasetOutput: TypeAlias = tuple[list[int], dict[str, int]]
 
 
-class BaseMathDataset(Dataset, ABC):
+class BaseMathDataset(IterableDataset, ABC):
     """
     This just load a file split by the equal sign and a define simple
     padded data collator
@@ -134,15 +134,12 @@ class BaseMathDataset(Dataset, ABC):
     def __len__(self) -> int:
         return (len(self.chunks_files) - 1) * self.chunk_size + self.last_chunk_size
 
-    def __getitem__(self, idx: int) -> DatasetOutput:
-        chunk_file = self.chunks_files[idx // self.chunk_size]
-
-        if self.current_file != chunk_file:
+    def __iter__(self) -> Generator[DatasetOutput, None, None]:
+        for chunk_file in self.chunks_files:
             with open(self.dataset_path / chunk_file, "r") as f:
-                self.current_data = [line.strip() for line in f]
-                self.current_file = chunk_file
-
-        return self.preprocess_data_point(self.current_data[idx % self.chunk_size])
+                for line in f:
+                    data_point = line.strip()
+                    yield self.preprocess_data_point(data_point)
 
     def split_data_point(self, data_point: str) -> tuple[list[int], list[int]]:
         [left, right] = data_point.split("=")
