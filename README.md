@@ -1,7 +1,7 @@
 # ReasonNet
 
 
-generate data (for data-100m.txt)
+generate data 
 
 ```bash
 cd data_gen
@@ -10,8 +10,8 @@ cargo run --release -- --min 3 --max 5 --size 20000000 --seed 32 --save-path dat
 mv data-20m-add ../datasets/.
 
 
-cargo run --release -- --min 3 --max 5 --size 100000000 --seed 32 --save-path data-100m-all --val-prop 0.05
-mv data-100m-all ../datasets/.
+cargo run --release -- --min 3 --max 5 --size 20000000 --seed 32 --save-path data-20m-all --chunk-size=500000 
+mv data-20m-all ../datasets/.
 
 ```
 

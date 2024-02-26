@@ -6,7 +6,7 @@ defaults:
 data:
   batch_size: 8196
   num_workers: 4
-  dataset_path: datasets/data-100m-all
+  dataset_path: datasets/data-20m-all
 
 trainer:
   pl:
