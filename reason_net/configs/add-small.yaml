@@ -1,15 +1,15 @@
 defaults:
-  - module/model: 14M
+  - module/model: small
   - default
   - _self_
 
 data:
-  batch_size: 8196
+  batch_size: 24576
   num_workers: 4
   dataset_path: datasets/data-20m-add
 
 module:
-  lr: 5e-3
+  lr: 1e-3
 
 trainer:
   pl:
@@ -17,4 +17,4 @@ trainer:
 
 wandb:
   enabled: true
-  project_name: "reason_net_add"
+  project_name: "reason_net_add_small"
