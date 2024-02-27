@@ -83,7 +83,10 @@ class LLaMaModule(LightningModule):
         loss = loss + max_z_loss
 
         if accuracy:
-            ignore_mask = target != self.tokenizer.pad_token_id
+            ignore_mask = (target != self.tokenizer.pad_token_id) * (
+                target != self.tokenizer.reason_token_id
+            )  # * is the boolean way to say "and"
+
             token_acc = (
                 (logits.argmax(dim=-1)[ignore_mask] == target[ignore_mask])
                 .float()

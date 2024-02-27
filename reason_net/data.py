@@ -222,9 +222,7 @@ class MathDatasetReasonMiddle(BaseMathDataset):
             + data_right
             + [self.tokenizer.eos_token_id]
         )
-        return data, {
-            "cutoff": len(data_left) + self.reason_token_num,
-        }
+        return data, {"cutoff": len(data_left)}
 
 
 class MathDatasetReasonLeft(BaseMathDataset):
