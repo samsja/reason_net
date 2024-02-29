@@ -20,7 +20,6 @@ from beartype import beartype as typechecker
 
 MaskCache = Bool[Tensor, "1 1 seq_len seq_len"]
 RoPECache = Float[Tensor, "block_size head_embd 2"]
-KVCache = tuple[torch.Tensor, torch.Tensor]  # todo use jaxtyping
 
 
 HiddenState: TypeAlias = Float[Tensor, "batch seq n_embd"]
