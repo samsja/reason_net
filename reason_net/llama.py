@@ -82,7 +82,7 @@ class LLaMA(nn.Module):
             )
 
     @jaxtyped(typechecker=typechecker)
-    def forward(self, idx: Index) -> Logits:
+    def forward(self, idx: Index, mask_in: MaskCache | None = None) -> Logits:
         B, T = idx.size()
 
         block_size = self.conf.block_size
@@ -93,11 +93,15 @@ class LLaMA(nn.Module):
 
         if self.rope_cache is None:
             self.rope_cache = self.build_rope_cache(idx)
-        if self.mask_cache is None:
-            self.mask_cache = self.build_mask_cache(idx)
+
+        if mask_in is None:
+            if self.mask_cache is None:
+                self.mask_cache = self.build_mask_cache(idx)
+
+            mask_in = self.mask_cache
 
         rope = self.rope_cache[:T]
-        mask = self.mask_cache[:, :, :T, :T]
+        mask = mask_in[:, :, :T, :T]
 
         # forward the model itself
         x = self.transformer.wte(idx)  # token embeddings of shape (b, t, n_embd)
