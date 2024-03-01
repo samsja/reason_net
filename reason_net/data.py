@@ -3,8 +3,9 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 import os
 from pathlib import Path
-from typing import ClassVar, Literal, TypeAlias, TypeVar, TypedDict
+from typing import ClassVar, Literal, TypeAlias, TypeVar, TypedDict, TYPE_CHECKING
 import typing
+from einops import repeat
 
 import numpy as np
 
@@ -15,6 +16,9 @@ import lightning as L
 from torch.utils.data import Dataset, DataLoader
 from jaxtyping import Int, jaxtyped
 from beartype import beartype as typechecker
+
+if TYPE_CHECKING:
+    from reason_net.llama import MaskCache
 
 
 class MathTokenizer:
@@ -178,7 +182,7 @@ class BaseMathDataset(Dataset, ABC):
             cutoff = d_data["cutoff"]
             target[b, 0:cutoff] = self.tokenizer.pad_token_id
 
-        return {"data": padded_batch_tensor, "target": target}
+        return {"data": padded_batch_tensor, "target": target, "attn_mask": None}
 
 
 class MathDataset(BaseMathDataset):
@@ -193,6 +197,15 @@ class MathDataset(BaseMathDataset):
         )
 
         return data, {"cutoff": len(data_left)}
+
+
+@jaxtyped(typechecker=typechecker)
+def build_mask_cache() -> "MaskCache":
+    ones = torch.ones(
+        (64, 64),  # todo block size is hardcoded here
+        dtype=torch.bool,
+    )
+    return torch.tril(ones).unsqueeze(0).unsqueeze(0)
 
 
 class MathDatasetReasonMiddle(BaseMathDataset):
@@ -223,6 +236,22 @@ class MathDatasetReasonMiddle(BaseMathDataset):
             + [self.tokenizer.eos_token_id]
         )
         return data, {"cutoff": len(data_left)}
+
+    @jaxtyped(typechecker=typechecker)
+    def collate_batch(self, batch: list[DatasetOutput]) -> BatchDataPoint:
+        tensor_batch = super().collate_batch(batch)
+
+        mask = build_mask_cache()
+
+        tensor_mask = repeat(
+            mask,
+            "l1 l2 s1 s2 -> b l1 l2 s1 s2",
+            b=len(batch),
+        )
+
+        tensor_batch["attn_mask"] = tensor_mask
+
+        return tensor_batch
 
 
 class MathDatasetReasonLeft(BaseMathDataset):
@@ -259,6 +288,7 @@ class MathDatasetReasonLeft(BaseMathDataset):
 class BatchDataPoint(TypedDict):
     data: Int[Tensor, "b seq"]
     target: Int[Tensor, "b seq_minus_one"]
+    attn_mask: "MaskCache" | None
 
 
 class MathDataModule(L.LightningDataModule):
