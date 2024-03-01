@@ -9,6 +9,7 @@ from lightning.pytorch.callbacks import Callback
 from typing import TYPE_CHECKING, Any, Type, no_type_check
 
 from reason_net.pydantic_conf import Config
+from reason_net.data import BatchDataPoint
 
 if TYPE_CHECKING:
     from reason_net.module import LLaMaModule
@@ -32,7 +33,7 @@ class PerfMonitor(Callback):
         trainer: "Trainer",
         pl_module: "LLaMaModule",
         outputs: Any,
-        batch: Any,
+        batch: BatchDataPoint,
         batch_idx: int,
     ) -> None:
         if self.num_batch_seen % self.config.log_every_n_batchs == 0:
@@ -69,8 +70,8 @@ class PerfMonitor(Callback):
                 self.total_token_seen = 0
 
         self.num_batch_seen += 1
-        self.total_sample_seen += len(batch[0])
-        self.total_token_seen += len(batch[0]) * len(batch[0][0])
+        self.total_sample_seen += len(batch["data"])
+        self.total_token_seen += len(batch["data"]) * len(batch["data"])
 
 
 class PerfMonitorConfig(Config):
