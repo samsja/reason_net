@@ -249,6 +249,15 @@ class MathDatasetReasonMiddle(BaseMathDataset):
             b=len(batch),
         )
 
+        for mask, data_point in zip(tensor_mask, batch):
+            cutoff = data_point[1]["cutoff"]
+            mask[
+                :,
+                :,
+                cutoff : cutoff + self.reason_token_num,
+                cutoff : cutoff + self.reason_token_num,
+            ] = True
+
         tensor_batch["attn_mask"] = tensor_mask
 
         return tensor_batch
