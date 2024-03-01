@@ -61,11 +61,11 @@ class LLaMaModule(LightningModule):
             },
         }
 
-    @jaxtyped(typechecker=typechecker)
+    # @jaxtyped(typechecker=typechecker)
     def _loss_step(
         self, step_name: str, batch: BatchDataPoint, _batch_idx, accuracy: bool
     ) -> tuple[Float[Tensor, ""], Float[Tensor, ""]]:
-        data, target = batch
+        data, target = batch["data"], batch["target"]
         input = data[:, :-1]
 
         assert input.shape == target.shape

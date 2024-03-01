@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 import os
 from pathlib import Path
-from typing import ClassVar, Literal, TypeAlias, TypeVar
+from typing import ClassVar, Literal, TypeAlias, TypeVar, TypedDict
 import typing
 
 import numpy as np
@@ -178,7 +178,7 @@ class BaseMathDataset(Dataset, ABC):
             cutoff = d_data["cutoff"]
             target[b, 0:cutoff] = self.tokenizer.pad_token_id
 
-        return padded_batch_tensor, target
+        return {"data": padded_batch_tensor, "target": target}
 
 
 class MathDataset(BaseMathDataset):
@@ -256,7 +256,9 @@ class MathDatasetReasonLeft(BaseMathDataset):
         }
 
 
-BatchDataPoint: TypeAlias = tuple[Int[Tensor, "b seq"], Int[Tensor, "b seq_minus_one"]]
+class BatchDataPoint(TypedDict):
+    data: Int[Tensor, "b seq"]
+    target: Int[Tensor, "b seq_minus_one"]
 
 
 class MathDataModule(L.LightningDataModule):
