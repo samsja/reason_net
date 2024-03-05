@@ -16,7 +16,7 @@ import torch
 import wandb
 
 from reason_net.data import MathDataModule, MathDataConfig, ReasonConfig
-from reason_net.module import LLaMaModule, ModuleConfig
+from reason_net.module import LLaMaModule, ModuleConfig, ReasonModuleConfig
 
 
 class PlTrainerConfig(Config):
@@ -59,8 +59,17 @@ class RunConfig(Config):
             if self.data.reason is None:
                 self.data.reason = ReasonConfig()
                 # this put default reason value in case none are passed
+
+            if self.module.reason is None:
+                self.module.reason = ReasonModuleConfig(
+                    reason_token_num=self.data.reason.reason_token_num
+                )
+            else:
+                self.module.reason.reason_token_num = self.data.reason.reason_token_num
         else:
             self.data.reason = None
+            self.module.reason = None
+
         return self
 
 

@@ -1,8 +1,12 @@
 from typing import TypeAlias, TypeVar
+from einops import rearrange, repeat
 
 from torch import Tensor, nn
+import torch
+import torch.nn.functional as F
 from jaxtyping import Float, Int, jaxtyped
 from beartype import beartype as typechecker
+
 
 X = TypeVar("X")
 
@@ -40,3 +44,17 @@ class MaxZLoss(nn.CrossEntropyLoss):
 
         z_loss = self.z_loss_w * max_logits.pow(2).mean()
         return loss, z_loss
+
+
+def sim_clr_loss(x: Float[Tensor, "batch seq n_embd"]) -> SingleFloat:
+    x = F.normalize(x, dim=-1)
+    x_t = rearrange(x, "batch seq n_embd -> batch n_embd seq")
+    sim = x @ x_t
+
+    seq, b = sim.shape[1], sim.shape[0]
+
+    eye = repeat(
+        torch.eye(seq, device=sim.device, dtype=sim.dtype), "s1 s2-> b s1 s2", b=b
+    )
+
+    return torch.norm(sim - eye, p=2)

@@ -7,7 +7,7 @@ import torch
 from lightning import LightningModule
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from beartype import beartype as typechecker
-from reason_net.loss import MaxZLoss
+from reason_net.loss import MaxZLoss, sim_clr_loss
 from reason_net.pydantic_conf import Config
 
 from reason_net.data import BatchDataPoint, MathTokenizer
@@ -20,11 +20,18 @@ b = TypeVar("b")
 Batch: TypeAlias = tuple[Int[Tensor, "b seq_input"], Int[Tensor, "b seq_output"]]
 
 
+class ReasonModuleConfig(Config):
+    reason_token_num: int
+    reason_loss_w: float = 2e-4
+
+
 class ModuleConfig(Config):
     model: LLaMaConfig
     lr: float
     warmup_steps: int = 400
     z_loss_w: float = 2e-4
+
+    reason: ReasonModuleConfig | None = None
 
 
 class LLaMaModule(LightningModule):
@@ -81,6 +88,22 @@ class LLaMaModule(LightningModule):
         self.log(f"{step_name}_max_z_loss", max_z_loss, sync_dist=True)
 
         loss = loss + max_z_loss
+
+        if self.conf.reason:
+            reason_logits = logits[input == self.tokenizer.reason_token_id]
+
+            reason_logits = rearrange(
+                reason_logits,
+                "(b n) vocab -> b n vocab",
+                b=data.shape[0],
+                n=self.conf.reason.reason_token_num,
+            )
+            reason_logits_entropy = self.conf.reason.reason_loss_w * sim_clr_loss(
+                reason_logits
+            )
+            self.log(f"{step_name}_reason_loss", reason_logits_entropy)
+
+            loss = loss + reason_logits_entropy
 
         if accuracy:
             ignore_mask = (target != self.tokenizer.pad_token_id) * (
